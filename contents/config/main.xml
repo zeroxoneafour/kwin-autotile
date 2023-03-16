@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+    <kcfgfile name=""/>
+    <group name="">
+        <entry name="UseWhitelist" type="bool"><default>false</default></entry>
+        <entry name="Blacklist" type="string"><default>krunner</default></entry>
+        <entry name="TileUtilityWindows" type="bool"><default>false</default></entry>
+        <entry name="Debug" type="bool"><default>false</default></entry>
+    </group>
+</kcfg>

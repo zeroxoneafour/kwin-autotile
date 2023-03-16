@@ -15,7 +15,7 @@
             "KWin/Script",
             "KCModule"
         ],
-        "Version": "1.0"
+        "Version": "0.1.0"
     },
     "X-KDE-ConfigModule": "kwin/effects/configs/kcm_kwin4_genericscripted",
     "X-KDE-PluginKeyword": "autotile",

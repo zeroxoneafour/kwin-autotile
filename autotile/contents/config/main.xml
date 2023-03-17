@@ -3,7 +3,7 @@
     <kcfgfile name=""/>
     <group name="">
         <entry name="UseWhitelist" type="bool"><default>false</default></entry>
-        <entry name="Blacklist" type="string"><default>krunner</default></entry>
+        <entry name="Blacklist" type="string"><default>krunner,yakuake</default></entry>
         <entry name="TileUtilityWindows" type="bool"><default>false</default></entry>
         <entry name="Debug" type="bool"><default>false</default></entry>
         <entry name="RetileWindow" type="string"><default>Meta+Shift+Space</default></entry>

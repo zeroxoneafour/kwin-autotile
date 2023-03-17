@@ -1,7 +1,7 @@
-let debug = readConfig("Debug", false);
-let useWhitelist = readConfig("UseWhitelist", false);
-let blacklist = readConfig("Blacklist", "krunner").split(',').map(x => x.trim());
-let tileUtilityWindows = readConfig("TileUtilityWindows", false);
+let debug;
+let useWhitelist;
+let blacklist;
+let tileUtilityWindows;
 
 function printDebug(str, isError) {
     if (isError) {
@@ -11,9 +11,19 @@ function printDebug(str, isError) {
     }
 }
 
-printDebug("useWhitelist == " + useWhitelist, false);
-printDebug("blacklist == " + blacklist, false);
-printDebug("tileUtilityWindows == " + tileUtilityWindows, false);
+let updateConfig = function() {
+    debug = readConfig("Debug", false);
+    useWhitelist = readConfig("UseWhitelist", false);
+    blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
+    tileUtilityWindows = readConfig("TileUtilityWindows", false);
+    printDebug("Config Updated", false)
+    printDebug("useWhitelist == " + useWhitelist, false);
+    printDebug("blacklist == " + blacklist, false);
+    printDebug("tileUtilityWindows == " + tileUtilityWindows, false);
+}
+
+updateConfig();
+options.configChanged.connect(updateConfig);
 
 // whether to ignore a client or not
 function doTileClient(client) {
@@ -26,11 +36,12 @@ function doTileClient(client) {
         return false;
     }
     // check if client is black/whitelisted
-    if (blacklist.includes(client.resourceClass.toString())) {
-        return useWhitelist;
-    } else {
-        return !useWhitelist;
+    for (i of blacklist) {
+        if (client.resourceClass.toString().includes(i) || i.includes(client.resourceClass.toString())) {
+            return useWhitelist;
+        }
     }
+    return !useWhitelist;
 }
 
 // add a client to the root tile, splitting tiles if needed

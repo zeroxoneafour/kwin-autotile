@@ -1,6 +1,6 @@
 let debug = readConfig("Debug", false);
 let useWhitelist = readConfig("UseWhitelist", false);
-let blacklist = readConfig("Blacklist", "").split(',').map(x => x.trim());
+let blacklist = readConfig("Blacklist", "krunner").split(',').map(x => x.trim());
 let tileUtilityWindows = readConfig("TileUtilityWindows", false);
 
 function printDebug(str, isError) {
@@ -111,13 +111,13 @@ function untileClient(client) {
     client.tile = null;
 }
 
-let desktop_change = function(client, _desktop) {
+let desktopChange = function(client, _desktop) {
     printDebug("Desktop changed on " + client.resourceClass, false);
     untileClient(client);
     tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
 }
 
-let geometry_change = function(client, _oldgeometry) {
+let geometryChange = function(client, _oldgeometry) {
     printDebug("Geometry changed on " + client.resourceClass, false);
     if (client.tile == null) {
         untileClient(client);
@@ -133,15 +133,15 @@ let add_client = function(client) {
     printDebug("Adding client " + client.resourceClass, false);
     if (doTileClient(client)) {
         printDebug("Tiling client", false);
-        client.frameGeometryChanged.connect(geometry_change);
-        client.desktopPresenceChanged.connect(desktop_change)
+        client.frameGeometryChanged.connect(geometryChange);
+        client.desktopPresenceChanged.connect(desktopChange)
         tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
     } else {
         printDebug("Not tiling client", false);
     }
 }
 
-let remove_client = function(client) {
+let removeClient = function(client) {
     printDebug("Removing client " + client.resourceClass, false);
     if (doTileClient(client)) {
         printDebug("Untiling client", false);
@@ -151,6 +151,17 @@ let remove_client = function(client) {
     }
 }
 
+// keybind for retiling windows
+let retileWindow = function() {
+    let client = workspace.activeClient;
+    if (client.tile == null) {
+        tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
+    } else {
+        untileClient(client);
+    }
+}
+
 // maybe someday we will be able to freely tile clients, idk
 workspace.clientAdded.connect(add_client);
-workspace.clientRemoved.connect(remove_client);
+workspace.clientRemoved.connect(removeClient);
+registerShortcut("RetileWindow", "Autotile: Untile/Retile Window", "Meta+Shift+Space", retileWindow);

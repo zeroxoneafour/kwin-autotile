@@ -7,7 +7,7 @@ Please do! I have very little time to maintain this script as much as it needs t
 I will try to be active on the Github for this project, to point out issues and such.
 
 ## building
-Run zip -r autotile.kwinscript autotile from outside this directory to build. Then install autotile.kwinscript. Opendesktop wouldn't let me verify my email, so I cannot upload the script to the KWin shop.
+Run `make` and then `make install`.
 
 ## license
 MIT licensed, do whatever with credit given

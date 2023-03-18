@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>292</width>
-    <height>113</height>
+    <width>335</width>
+    <height>154</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,8 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>271</width>
-     <height>91</height>
+     <width>311</width>
+     <height>130</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -39,6 +39,20 @@
        </widget>
       </item>
       <item>
+       <widget class="QLineEdit" name="kcfg_Blacklist">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Blacklist, do not tile these windows (becomes whitelist if whitelist is checked)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>krunner,yakuake</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
        <widget class="QCheckBox" name="kcfg_TileUtilityWindows">
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Like popups&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -48,17 +62,34 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QComboBox" name="comboBox">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>No border all</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>No border tiled</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Border selected</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Border all</string>
+         </property>
+        </item>
+       </widget>
+      </item>
      </layout>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="kcfg_Blacklist">
-      <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Blacklist, do not tile these windows (becomes whitelist if whitelist is checked)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-      </property>
-      <property name="text">
-       <string>krunner,yakuake</string>
-      </property>
-     </widget>
     </item>
     <item>
      <widget class="QCheckBox" name="kcfg_Debug">

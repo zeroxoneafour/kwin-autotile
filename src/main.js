@@ -47,6 +47,7 @@ function doTileClient(client) {
     return !useWhitelist;
 }
 
+// gets windows on desktop because tiles share windows across several desktops
 function windowsOnDesktop(tile, desktop) {
     let ret = [];
     for (w of tile.windows) {
@@ -65,6 +66,9 @@ function setTile(client, tile) {
     client.wasTiled = true;
     client.keepBelow = true;
     client.oldDesktop = client.desktop;
+    if (borders == 1 || borders == 2) {
+        client.noBorder = true;
+    }
 }
 
 // sets tile and moves things around a bit if needed
@@ -85,7 +89,7 @@ function putClientInTile(client, tile) {
     setTile(client, tile);
 }
 
-// TODO: make tiling work when window is removed in certain scenarios
+// untile a client (ill refactor this later)
 function untileClient(client) {
     if (client.wasTiled == false) {
         return;
@@ -101,14 +105,49 @@ function untileClient(client) {
             sibling = parent.tiles[0];
         }
         // only use windows on our virtual desktop
-        for (w of windowsOnDesktop(sibling, client.oldDesktop)) {
-            w.tile = parent;
+        let windows = windowsOnDesktop(sibling, client.oldDesktop);
+        if (windows.length != 0) {
+            for (w of windows) {
+                setTile(w, parent);
+            }
+        } else {
+            // get the shallowest no split window and bring it up to fill the gap
+            let stack = [sibling];
+            mainloop: while (stack.length > 0) {
+                let stackNext = [];
+                // indent over 9000
+                for (t of stack) {
+                    // try to find binary-split window
+                    if (t.tiles.length == 2) {
+                        let t0 = t.tiles[0];
+                        let t0_windows = windowsOnDesktop(t0, client.oldDesktop);
+                        let t1 = t.tiles[1];
+                        let t1_windows = windowsOnDesktop(t1, client.oldDesktop);
+                        if (t0_windows.length != 0 && t1_windows.length != 0) {
+                            // move windows from one tile to fill in gap
+                            for (w of t0_windows) {
+                                setTile(w, client.oldTile);
+                            }
+                            // move windows in other tile to fill in gap created from moving original windows
+                            for (w of t1_windows) {
+                                setTile(w, t);
+                            }
+                            break mainloop;
+                        }
+                    }
+                    stackNext = stackNext.concat(w.tiles);
+                }
+                stack = stackNext;
+            }
         }
     }
     client.oldDesktop = client.desktop;
     client.wasTiled = false;
     client.tile = null;
     client.keepBelow = false;
+    if (borders == 1 || borders == 2) {
+        client.noBorder = false;
+    }
 }
 
 let desktopChange = function(client, _desktop) {
@@ -181,13 +220,16 @@ function tileClient(client, rootTile) {
     }
 }
 
-let add_client = function(client) {
+let addClient = function(client) {
     printDebug("Adding client " + client.resourceClass, false);
     if (doTileClient(client)) {
         printDebug("Tiling client", false);
         tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
     } else {
         printDebug("Not tiling client", false);
+    }
+    if (borders == 0) {
+        client.noBorder = true;
     }
 }
 
@@ -211,7 +253,22 @@ let retileWindow = function() {
     }
 }
 
+// border stuff (github issue #1)
+let clientActivated = function(client) {
+    // for setting borders for the last active client to off when new one is activated
+    if (workspace.lastActiveClient != null && workspace.lastActiveClient != undefined) {
+        if (borders == 2) {
+            workspace.lastActiveClient.noBorder = true;
+        }
+    }
+    workspace.lastActiveClient = client;
+    if (borders == 2 && client.tile != null) {
+        client.noBorder = false;
+    }
+}
+
 // maybe someday we will be able to freely tile clients, idk
-workspace.clientAdded.connect(add_client);
+workspace.clientAdded.connect(addClient);
 workspace.clientRemoved.connect(removeClient);
+workspace.clientActivated.connect(clientActivated);
 registerShortcut("RetileWindow", "Autotile: Untile/Retile Window", "Meta+Shift+Space", retileWindow);

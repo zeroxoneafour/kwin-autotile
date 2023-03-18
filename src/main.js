@@ -1,7 +1,8 @@
 let debug;
 let useWhitelist;
 let blacklist;
-let tileUtilityWindows;
+let tileDialogs;
+let borders;
 
 function printDebug(str, isError) {
     if (isError) {
@@ -15,11 +16,13 @@ let updateConfig = function() {
     debug = readConfig("Debug", false);
     useWhitelist = readConfig("UseWhitelist", false);
     blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
-    tileUtilityWindows = readConfig("TileUtilityWindows", false);
+    tileDialogs = readConfig("TileDialogs", false);
+    borders = readConfig("Borders", 1);
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
     printDebug("blacklist == " + blacklist, false);
-    printDebug("tileUtilityWindows == " + tileUtilityWindows, false);
+    printDebug("tileDialogs == " + tileDialogs, false);
+    printDebug("borders == " + borders, false);
 }
 
 updateConfig();
@@ -32,7 +35,7 @@ function doTileClient(client) {
         return false;
     }
     // check for the client type
-    if (!(client.normalWindow || (client.utility && tileUtilityWindows))) {
+    if (!(client.normalWindow || ((client.dialog || client.popupWindow) && tileDialogs))) {
         return false;
     }
     // check if client is black/whitelisted
@@ -44,109 +47,145 @@ function doTileClient(client) {
     return !useWhitelist;
 }
 
-// add a client to the root tile, splitting tiles if needed
-// TODO: fix tiling when moving one root window to another via desktop switching
-function tileClient(rootTile, client) {
+function windowsOnDesktop(tile, desktop) {
+    let ret = [];
+    for (w of tile.windows) {
+        if (w.desktop == desktop || w.desktop == -1) {
+            ret.push(w);
+        }
+    }
+    return ret;
+}
+
+// forcibly sets tile, for use almost exclusively with putClientInTile
+function setTile(client, tile) {
     client.tile = null;
+    client.tile = tile;
+    client.oldTile = tile;
+    client.wasTiled = true;
+    client.keepBelow = true;
+    client.oldDesktop = client.desktop;
+}
+
+// sets tile and moves things around a bit if needed
+function putClientInTile(client, tile) {
+    // case for non-root tiles
+    if (tile.parent != undefined) {
+        let parent = tile.parent;
+        let sibling;
+        if (tile == parent.tiles[0]) {
+            sibling = parent.tiles[1];
+        } else {
+            sibling = parent.tiles[0];
+        }
+        for (w of windowsOnDesktop(parent, client.desktop)) {
+            setTile(w, sibling);
+        }
+    }
+    setTile(client, tile);
+}
+
+// TODO: make tiling work when window is removed in certain scenarios
+function untileClient(client) {
+    if (client.wasTiled == false) {
+        return;
+    }
+    // if root tile then make sure the loop doesnt fail
+    if (client.oldTile.parent != undefined) {
+        let parent = client.oldTile.parent;
+        let sibling;
+        // get the parent and merge its child tile's window back into the parent to fill empty space
+        if (client.oldTile == parent.tiles[0]) {
+            sibling = parent.tiles[1];
+        } else {
+            sibling = parent.tiles[0];
+        }
+        // only use windows on our virtual desktop
+        for (w of windowsOnDesktop(sibling, client.oldDesktop)) {
+            w.tile = parent;
+        }
+    }
+    client.oldDesktop = client.desktop;
+    client.wasTiled = false;
+    client.tile = null;
+    client.keepBelow = false;
+}
+
+let desktopChange = function(client, _desktop) {
+    printDebug("Desktop changed on " + client.resourceClass, false);
+    untileClient(client);
+    tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
+}
+
+let geometryChange = function(client, _oldgeometry) {
+    printDebug("Geometry changed on " + client.resourceClass, false);
+    // if removed from tile
+    if (client.wasTiled == true && client.tile == null) {
+        untileClient(client);
+        return;
+    }
+    // if added to tile
+    if (client.tile != null && client.wasTiled == false) {
+        // move old windows in tile to other clients old tile
+        for (w of windowsOnDesktop(client.tile, client.desktop)) {
+            if (w != client) {
+                putClientInTile(w, client.oldTile);
+            }
+        }
+        putClientInTile(client, w.tile);
+    }
+}
+
+// add a client to the root tile, splitting tiles if needed
+function tileClient(client, rootTile) {
+    if (client.hasBeenTiled == undefined) {
+        client.frameGeometryChanged.connect(geometryChange);
+        client.desktopPresenceChanged.connect(desktopChange);
+        client.hasBeenTiled = true;
+    }
+    let targetTile = null;
     let tilesToCheck = [rootTile];
     // we need to check if any tiles at all have windows so if they dont we can place the client on the root window
     let has_windows = false;
     // breadth-first search for open tiles, starting at the root tile and working progressively smaller
     // works kind of i guess? dont try with more than ~5-6 tiles
-    while (tilesToCheck.length != 0) {
+    mainloop: while (tilesToCheck.length != 0) {
         let tilesToCheckNext = [];
         for (i of tilesToCheck) {
-            let i_windows = [];
             // have to separate windows by virtual desktop because tiling affects on screen basis
-            for (w of i.windows) {
-                if (w.desktop == client.desktop || w.desktop == -1) {
-                    i_windows.push(w);
-                }
-            }
+            let i_windows = windowsOnDesktop(i, client.desktop);
             // see has_windows comment
             if (!(has_windows) && i_windows.length != 0) {
                 has_windows = true;
             }
             // check if there are no windows or child tiles
             if (i_windows.length == 0 && i.tiles.length == 0) {
-                client.tile = i;
-                break;
+                targetTile = i;
+                break mainloop;
             }
             // check if there is only one window and the tile is binary-splittable
-            if (i_windows.length == 1 && i.tiles.length == 2) {
-                i_windows[0].tile = i.tiles[0];
-                client.tile = i.tiles[1];
-                break;
+            if (i_windows.length != 0 && i.tiles.length == 2) {
+                targetTile = i.tiles[0];
+                break mainloop;
             }
-            //
             tilesToCheckNext = tilesToCheckNext.concat(i.tiles);
         }
         tilesToCheck = tilesToCheckNext;
     }
     // if there are no windows on the page, set tile to the root tile
     if (!has_windows) {
-        client.tile = rootTile;
+        targetTile = rootTile;
     }
-    // used in other things if the client is moved around
-    client.oldTile = client.tile;
-    client.oldDesktop = client.desktop;
-}
-
-
-// TODO: make tiling work when window is removed in certain scenarios
-function untileClient(client) {
-    if (client.oldTile == null) {
-        return;
+    if (targetTile != null) {
+        putClientInTile(client, targetTile);
     }
-    // if root tile then make sure the loop doesnt fail
-    if (client.oldTile.parent == undefined) {
-        client.oldDesktop = client.desktop;
-        client.tile = null;
-    }
-    let parent = client.oldTile.parent;
-    let main_tile;
-    // get the parent and merge its child tile's window back into the parent to fill empty space
-    if (client.oldTile == parent.tiles[0]) {
-        main_tile = parent.tiles[1];
-    } else {
-        main_tile = parent.tiles[0];
-    }
-    // only use windows on our virtual desktop
-    for (w of main_tile.windows) {
-        if (w.desktop == client.oldDesktop || w.desktop == -1) {
-            w.tile = parent;
-        }
-    }
-    // stuff for desktop client switching
-    client.oldDesktop = client.desktop;
-    client.tile = null;
-}
-
-let desktopChange = function(client, _desktop) {
-    printDebug("Desktop changed on " + client.resourceClass, false);
-    untileClient(client);
-    tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
-}
-
-let geometryChange = function(client, _oldgeometry) {
-    printDebug("Geometry changed on " + client.resourceClass, false);
-    if (client.tile == null) {
-        untileClient(client);
-        return;
-    }
-    if (client.tile.windows.length == 2) {
-        client.tile.windows[0].tile = client.oldTile;
-    }
-    client.oldTile = client.tile;
 }
 
 let add_client = function(client) {
     printDebug("Adding client " + client.resourceClass, false);
     if (doTileClient(client)) {
         printDebug("Tiling client", false);
-        client.frameGeometryChanged.connect(geometryChange);
-        client.desktopPresenceChanged.connect(desktopChange)
-        tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
+        tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
     } else {
         printDebug("Not tiling client", false);
     }
@@ -162,11 +201,11 @@ let removeClient = function(client) {
     }
 }
 
-// keybind for retiling windows
+// keybind for untiling/retiling windows
 let retileWindow = function() {
     let client = workspace.activeClient;
     if (client.tile == null) {
-        tileClient(workspace.tilingForScreen(client.screen).rootTile, client);
+        tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
     } else {
         untileClient(client);
     }

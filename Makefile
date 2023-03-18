@@ -8,7 +8,7 @@ PKGDIR = pkg
 build: res src
 	zip -r $(PKGFILE) $(PKGDIR)
 
-install: $(OUTPUT)
+install: $(PKGFILE)
 	kpackagetool5 -t KWin/Script -s $(NAME) \
 		&& kpackagetool5 -u $(PKGFILE) \
 		|| kpackagetool5 -i $(PKGFILE)

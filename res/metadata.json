@@ -7,13 +7,12 @@
             }
         ],
         "Description": "Autotile using KWin 5.27 features",
-        "Icon": "preferences-system-windows-script-test",
+        "Icon": "preferences-system-windows-effect-presetwindows",
         "Id": "autotile",
         "License": "MIT",
         "Name": "Autotiling",
         "ServiceTypes": [
-            "KWin/Script",
-            "KCModule"
+            "KWin/Script"
         ],
         "Version": "%VERSION%"
     },

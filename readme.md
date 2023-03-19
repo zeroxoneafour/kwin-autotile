@@ -6,6 +6,7 @@ Autotiling for KWin using heavy inspiration from [kwin-tiling-scripts](https://i
 * Manage layouts via the integrated KWin GUI
 * Send your windows to other virtual desktops while tiled
 * Move your windows around, and automatically untile/retile them when moving (doesn't work unless tile you are moving into can be binary split)
+* Keybinds to select and move your windows around
 * If you close your eyes and imagine, then it can be as good as Bismuth
 
 ## limitations/bugs

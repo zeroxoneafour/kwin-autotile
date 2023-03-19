@@ -3,6 +3,7 @@ let useWhitelist;
 let blacklist;
 let tileDialogs;
 let borders;
+let blacklistCache;
 
 function printDebug(str, isError) {
     if (isError) {
@@ -18,6 +19,7 @@ let updateConfig = function() {
     blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
     tileDialogs = readConfig("TileDialogs", false);
     borders = readConfig("Borders", 1);
+    blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
     printDebug("blacklist == " + blacklist, false);
@@ -38,9 +40,15 @@ function doTileClient(client) {
     if (!(client.normalWindow || ((client.dialog || client.popupWindow || client.transient) && tileDialogs))) {
         return false;
     }
+    let c = client.resourceClass.toString();
+    // check if client is in blacklist cache (to save time)
+    if (blacklistCache.has(c)) {
+        return useWhitelist;
+    }
     // check if client is black/whitelisted
     for (i of blacklist) {
-        if (client.resourceClass.toString().includes(i) || i.includes(client.resourceClass.toString())) {
+        if (c.includes(i) || i.includes(c)) {
+            blacklistCache.add(c);
             return useWhitelist;
         }
     }
@@ -150,17 +158,21 @@ function untileClient(client) {
     }
 }
 
-let desktopChange = function(client, _desktop) {
-    printDebug("Desktop changed on " + client.resourceClass, false);
-    untileClient(client);
-    tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
+let desktopChange = function(client, desktop) {
+    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + desktop, false);
+    client.oldDesktop = desktop;
+    if (client.wasTiled) {
+        untileClient(client);
+        tileClient(client);
+    }
 }
 
 let geometryChange = function(client, _oldgeometry) {
     // if removed from tile
-    if (client.wasTiled == true && client.tile == null) {
+    if (client.wasTiled && client.tile == null) {
         printDebug(client.resourceClass + " was moved out of a tile");
         untileClient(client);
+        client.wasTiled = false;
         return;
     }
     // if added to tile
@@ -178,6 +190,8 @@ let geometryChange = function(client, _oldgeometry) {
 
 // add a client to the root tile, splitting tiles if needed
 function tileClient(client) {
+    // have to put this here so that there won't be a race condition between geometryChange and any function that also calls this
+    client.wasTiled = true;
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     if (client.hasBeenTiled == undefined) {
         client.frameGeometryChanged.connect(geometryChange);
@@ -219,6 +233,13 @@ function tileClient(client) {
     }
     if (targetTile != null) {
         putClientInTile(client, targetTile);
+        if (client.hasBeenTiled == undefined) {
+            client.frameGeometryChanged.connect(geometryChange);
+            client.desktopPresenceChanged.connect(desktopChange);
+            client.hasBeenTiled = true;
+        }
+    } else {
+        client.wasTiled = false;
     }
 }
 
@@ -239,19 +260,6 @@ let removeClient = function(client) {
     }
 }
 
-// keybind for untiling/retiling windows
-let retileWindow = function() {
-    let client = workspace.activeClient;
-    if (client.tile != null) {
-        printDebug("Untiling client " + client.resourceClass, false);
-        untileClient(client);
-    } else {
-        client.wasTiled = true; // have to put this here to make sure geometryChange is not called before retiling
-        printDebug("Retiling client " + client.resourceClass, false);
-        tileClient(client);
-    }
-}
-
 // border stuff (github issue #1)
 let clientActivated = function(client) {
     // for setting borders for the last active client to off when new one is activated
@@ -268,32 +276,35 @@ let clientActivated = function(client) {
 
 // client minimized and maximized
 let clientMinimized = function(client) {
-    printDebug("Client " + client.resourceClass + " minimized", false);
-    untileClient(client);
+    if (client.wasTiled) {
+        printDebug("Client " + client.resourceClass + " minimized", false);
+        untileClient(client);
+        client.wasTiled = true;
+    }
 };
 let clientUnminimized = function(client) {
-    printDebug("Client " + client.resourceClass + " unminimized", false);
-    client.wasTiled = true;
-    tileClient(client);
+    if (client.wasTiled) {
+        printDebug("Client " + client.resourceClass + " unminimized", false);
+        tileClient(client);
+    }
 };
 
 // special stuff to untile fullscreen clients
-let clientFullScreen = function(client, fullScreen, _user) {
-    if (fullScreen) {
-        printDebug("Client " + client.resourceClass + " fullscreened", false);
-        untileClient(client);
+let clientFullScreen = function(client, fullscreen, _user) {
+    if (fullscreen) {
+        client.keepBelow = false;
+        client.keepAbove = true;
     } else {
-        client.wasTiled = true;
-        printDebug("Client " + client.resourceClass + " exited fullscreen", false);
-        tileClient(client);
+        client.keepAbove = false;
+        if (client.wasTiled) {
+            client.keepBelow = true;
+        }
     }
 }
 
-// maybe someday we will be able to freely tile clients, idk
 workspace.clientAdded.connect(addClient);
 workspace.clientRemoved.connect(removeClient);
 workspace.clientActivated.connect(clientActivated);
 workspace.clientMinimized.connect(clientMinimized);
 workspace.clientUnminimized.connect(clientUnminimized);
 workspace.clientFullScreenSet.connect(clientFullScreen);
-registerShortcut("RetileWindow", "Autotile: Untile/Retile Window", "Meta+Shift+Space", retileWindow);

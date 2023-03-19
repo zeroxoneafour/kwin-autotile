@@ -31,11 +31,11 @@ options.configChanged.connect(updateConfig);
 // whether to ignore a client or not
 function doTileClient(client) {
     // if the client is not movable, dont bother
-    if (client.transient || !client.moveable || !client.resizeable) {
+    if (client.fullscreen || !client.moveable || !client.resizeable) {
         return false;
     }
     // check for the client type
-    if (!(client.normalWindow || ((client.dialog || client.popupWindow) && tileDialogs))) {
+    if (!(client.normalWindow || ((client.dialog || client.popupWindow || client.transient) && tileDialogs))) {
         return false;
     }
     // check if client is black/whitelisted
@@ -91,7 +91,7 @@ function putClientInTile(client, tile) {
 
 // untile a client (ill refactor this later)
 function untileClient(client) {
-    if (client.wasTiled == false) {
+    if (!client.wasTiled) {
         return;
     }
     // if root tile then make sure the loop doesnt fail
@@ -164,7 +164,7 @@ let geometryChange = function(client, _oldgeometry) {
         return;
     }
     // if added to tile
-    if (client.tile != null && client.wasTiled == false) {
+    if (client.tile != null && !client.wasTiled) {
         printDebug(client.resourceClass + " was moved back into a tile");
         // move old windows in tile to other clients old tile
         for (w of windowsOnDesktop(client.tile, client.desktop)) {
@@ -177,7 +177,8 @@ let geometryChange = function(client, _oldgeometry) {
 }
 
 // add a client to the root tile, splitting tiles if needed
-function tileClient(client, rootTile) {
+function tileClient(client) {
+    let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     if (client.hasBeenTiled == undefined) {
         client.frameGeometryChanged.connect(geometryChange);
         client.desktopPresenceChanged.connect(desktopChange);
@@ -224,7 +225,7 @@ function tileClient(client, rootTile) {
 let addClient = function(client) {
     if (doTileClient(client)) {
         printDebug("Tiling client " + client.resourceClass, false);
-        tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
+        tileClient(client);
     }
     if (borders == 0) {
         client.noBorder = true;
@@ -247,7 +248,7 @@ let retileWindow = function() {
     } else {
         client.wasTiled = true; // have to put this here to make sure geometryChange is not called before retiling
         printDebug("Retiling client " + client.resourceClass, false);
-        tileClient(client, workspace.tilingForScreen(client.screen).rootTile);
+        tileClient(client);
     }
 }
 
@@ -265,8 +266,34 @@ let clientActivated = function(client) {
     }
 }
 
+// client minimized and maximized
+let clientMinimized = function(client) {
+    printDebug("Client " + client.resourceClass + " minimized", false);
+    untileClient(client);
+};
+let clientUnminimized = function(client) {
+    printDebug("Client " + client.resourceClass + " unminimized", false);
+    client.wasTiled = true;
+    tileClient(client);
+};
+
+// special stuff to untile fullscreen clients
+let clientFullScreen = function(client, fullScreen, _user) {
+    if (fullScreen) {
+        printDebug("Client " + client.resourceClass + " fullscreened", false);
+        untileClient(client);
+    } else {
+        client.wasTiled = true;
+        printDebug("Client " + client.resourceClass + " exited fullscreen", false);
+        tileClient(client);
+    }
+}
+
 // maybe someday we will be able to freely tile clients, idk
 workspace.clientAdded.connect(addClient);
 workspace.clientRemoved.connect(removeClient);
 workspace.clientActivated.connect(clientActivated);
+workspace.clientMinimized.connect(clientMinimized);
+workspace.clientUnminimized.connect(clientUnminimized);
+workspace.clientFullScreenSet.connect(clientFullScreen);
 registerShortcut("RetileWindow", "Autotile: Untile/Retile Window", "Meta+Shift+Space", retileWindow);

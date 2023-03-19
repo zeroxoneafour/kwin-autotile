@@ -11,7 +11,6 @@ Autotiling for KWin using heavy inspiration from [kwin-tiling-scripts](https://i
 ## limitations/bugs
 * Requires binary-split tiles (if your tiles were put in a tree, they would be a binary tree). If you don't know what this means, you're probably fine but don't use layouts that split in 3
 * More than 1 window in a single tile will cause untested and most likely undesireable behavior
-* Most bugs that required you to untile/retile windows now are fixed, but funnily enough untiling/retiling windows is currently broken
 * Completely untested with multiple screens (I don't have multiple screens)
 
 ## contributing

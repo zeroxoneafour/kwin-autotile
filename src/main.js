@@ -130,9 +130,19 @@ function untileClient(client) {
                 for (t of stack) {
                     // try to find binary-split window
                     if (t.tiles.length == 2) {
-                        let t0 = t.tiles[0];
+                        let t0;
+                        if (invertInsertion) {
+                            t0 = t.tiles[1];
+                        } else {
+                            t0 = t.tiles[0];
+                        }
+                        let t1;
+                        if (invertInsertion) {
+                            t1 = t.tiles[0];
+                        } else {
+                            t1 = t.tiles[1];
+                        }
                         let t0_windows = windowsOnDesktop(t0, client.oldDesktop);
-                        let t1 = t.tiles[1];
                         let t1_windows = windowsOnDesktop(t1, client.oldDesktop);
                         if (t0_windows.length != 0 && t1_windows.length != 0) {
                             // move windows from one tile to fill in gap

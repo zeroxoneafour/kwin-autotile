@@ -180,14 +180,25 @@ let geometryChange = function(client, _oldgeometry) {
     }
     // if added to tile
     if (client.tile != null && !client.wasTiled) {
-        printDebug(client.resourceClass + " was moved back into a tile");
-        // move old windows in tile to other clients old tile
-        for (w of windowsOnDesktop(client.tile, client.desktop)) {
-            if (w != client) {
-                putClientInTile(w, client.oldTile);
+        let tile = client.tile;
+        // 1 because of self window
+        if (windowsOnDesktop(tile, client.desktop).length > 1) {
+            // if the tile already has windows, then just swap their positions
+            printDebug(client.resourceClass + " was moved back into a tile with windows", false);
+            for (w of windowsOnDesktop(tile, client.desktop)) {
+                if (w != client) {
+                    putClientInTile(w, client.oldTile);
+                }
             }
+            setTile(client, tile);
+        } else {
+            // find a tile with a parent that has windows so we can insert it
+            printDebug(client.resourceClass + " was moved back into a tile without windows", false);
+            while (windowsOnDesktop(tile.parent, client.desktop).length == 0) {
+                tile = tile.parent;
+            }
+            putClientInTile(client, tile);
         }
-        putClientInTile(client, w.tile);
     }
 }
 

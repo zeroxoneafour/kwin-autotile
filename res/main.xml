@@ -7,6 +7,6 @@
         <entry name="TileDialogs" type="bool"><default>false</default></entry>
         <entry name="Debug" type="bool"><default>false</default></entry>
         <entry name="Borders" type="int"><default>1</default></entry>
-        <entry name="RetileWindow" type="string"><default>Meta+Shift+Space</default></entry>
+        <entry name="InvertInsertion" type="bool"><default>false</default></entry>
     </group>
 </kcfg>

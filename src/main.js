@@ -3,6 +3,7 @@ let useWhitelist;
 let blacklist;
 let tileDialogs;
 let borders;
+let invertInsertion;
 let blacklistCache;
 
 function printDebug(str, isError) {
@@ -19,12 +20,14 @@ let updateConfig = function() {
     blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
     tileDialogs = readConfig("TileDialogs", false);
     borders = readConfig("Borders", 1);
+    invertInsertion = readConfig("InvertInsertion", false);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
     printDebug("blacklist == " + blacklist, false);
     printDebug("tileDialogs == " + tileDialogs, false);
     printDebug("borders == " + borders, false);
+    printDebug("invertInsertion == " + invertInsertion, false);
 }
 
 updateConfig();
@@ -220,7 +223,12 @@ function tileClient(client) {
             }
             // check if there is only one window and the tile is binary-splittable
             if (t_windows.length != 0 && t.tiles.length == 2) {
-                targetTile = t.tiles[0];
+                // if the insertion order is inverted, windows will be pushed to the back instead of the front
+                if (invertInsertion) {
+                    targetTile = t.tiles[1];
+                } else {
+                    targetTile = t.tiles[0];
+                }
                 break mainloop;
             }
             stackNext = stackNext.concat(t.tiles);

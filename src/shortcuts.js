@@ -77,6 +77,7 @@ let insertAbove = function() {
         return;
     }
     printDebug("Inserting " + client.resourceClass + " above", false);
+    let oldTile = client.tile;
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
@@ -85,7 +86,8 @@ let insertAbove = function() {
     // if tile has no children then don't tile
     if (tile == undefined) {
         printDebug("Could not insert " + client.resourceClass, false);
-        tileClient(client);
+        // now inserts client back into its old tile instead of retiling
+        putClientInTile(client, oldTile);
     }
     putClientInTile(client, tile);
 }
@@ -160,6 +162,7 @@ let insertBelow = function() {
         return;
     }
     printDebug("Inserting " + client.resourceClass + " below", false);
+    let oldTile = client.tile;
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
@@ -168,7 +171,7 @@ let insertBelow = function() {
     // if tile has no children then don't tile
     if (tile == undefined) {
         printDebug("Could not insert " + client.resourceClass, false);
-        tileClient(client);
+        putClientInTile(client, oldTile);
     }
     putClientInTile(client, tile);
 }
@@ -243,6 +246,7 @@ let insertLeft = function() {
         return;
     }
     printDebug("Inserting " + client.resourceClass + " left", false);
+    let oldTile = client.tile;
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
@@ -251,7 +255,7 @@ let insertLeft = function() {
     // if tile has no children then don't tile
     if (tile == undefined) {
         printDebug("Could not insert " + client.resourceClass, false);
-        tileClient(client);
+        putClientInTile(client, oldTile);
     }
     putClientInTile(client, tile);
 }
@@ -326,6 +330,7 @@ let insertRight = function() {
         return;
     }
     printDebug("Inserting " + client.resourceClass + " right", false);
+    let oldTile = client.tile;
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
@@ -334,7 +339,7 @@ let insertRight = function() {
     // if tile has no children then don't tile
     if (tile == undefined) {
         printDebug("Could not insert " + client.resourceClass, false);
-        tileClient(client);
+        putClientInTile(client, oldTile);
     }
     putClientInTile(client, tile);
 }

@@ -16,7 +16,7 @@ Autotiling for KWin using heavy inspiration from [kwin-tiling-scripts](https://i
 * While the author does not test on multiple screens, others have reported that it works perfectly fine.
 
 ## contributing
-Please do! I have very little time to maintain this script as much as it needs to be. There are many bugs that render it more-or-less unuseable (cut down to less, but still there).
+I think that this script is stable, but if there are any fixes or additions you will like I will be more than happy to add them.
 
 I will try to be active on the Github for this project, to point out issues and such.
 

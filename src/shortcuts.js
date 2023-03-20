@@ -81,7 +81,11 @@ let insertAbove = function() {
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
-        tile = tile.tiles[0];
+        if (invertInsertion) {
+            tile = tile.tiles[1];
+        } else {
+            tile = tile.tiles[0];
+        }
     }
     // if tile has no children then don't tile
     if (tile == undefined) {
@@ -166,7 +170,11 @@ let insertBelow = function() {
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
-        tile = tile.tiles[0];
+        if (invertInsertion) {
+            tile = tile.tiles[1];
+        } else {
+            tile = tile.tiles[0];
+        }
     }
     // if tile has no children then don't tile
     if (tile == undefined) {
@@ -250,7 +258,11 @@ let insertLeft = function() {
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
-        tile = tile.tiles[0];
+        if (invertInsertion) {
+            tile = tile.tiles[1];
+        } else {
+            tile = tile.tiles[0];
+        }
     }
     // if tile has no children then don't tile
     if (tile == undefined) {
@@ -334,7 +346,11 @@ let insertRight = function() {
     untileClient(client);
     client.wasTiled = true;
     if (windowsOnDesktop(tile, client.desktop).length != 0) {
-        tile = tile.tiles[0];
+        if (invertInsertion) {
+            tile = tile.tiles[1];
+        } else {
+            tile = tile.tiles[0];
+        }
     }
     // if tile has no children then don't tile
     if (tile == undefined) {

@@ -1,7 +1,7 @@
 let debug;
 let useWhitelist;
 let blacklist;
-let tileDialogs;
+let tilePopups;
 let borders;
 let invertInsertion;
 let blacklistCache;
@@ -18,14 +18,14 @@ let updateConfig = function() {
     debug = readConfig("Debug", false);
     useWhitelist = readConfig("UseWhitelist", false);
     blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
-    tileDialogs = readConfig("TileDialogs", false);
+    tilePopups = readConfig("TilePopups", false);
     borders = readConfig("Borders", 1);
     invertInsertion = readConfig("InvertInsertion", false);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
     printDebug("blacklist == " + blacklist, false);
-    printDebug("tileDialogs == " + tileDialogs, false);
+    printDebug("tilePopups == " + tilePopups, false);
     printDebug("borders == " + borders, false);
     printDebug("invertInsertion == " + invertInsertion, false);
 }
@@ -39,8 +39,12 @@ function doTileClient(client) {
     if (client.fullscreen || !client.moveable || !client.resizeable) {
         return false;
     }
-    // check for the client type
-    if (!(client.normalWindow || ((client.dialog || client.popupWindow || client.transient) && tileDialogs))) {
+    // check if client is a popup window or transient (placeholder window)
+    if ((client.popupWindow || client.transient) && !tilePopups) {
+        return false;
+    }
+    // check if client is normal, with exception for popups and transients
+    if (!(client.normalWindow || client.popupWindow || client.transient)) {
         return false;
     }
     let c = client.resourceClass.toString();
@@ -314,7 +318,12 @@ let clientMinimized = function(client) {
 let clientUnminimized = function(client) {
     if (client.wasTiled) {
         printDebug("Client " + client.resourceClass + " unminimized", false);
-        tileClient(client);
+        // if tile can be split, put window back in its original place
+        if (windowsOnDesktop(client.oldTile.parent, client.desktop) != 0) {
+            putClientInTile(client, client.oldTile);
+        } else {
+            tileClient(client);
+        }
     }
 };
 

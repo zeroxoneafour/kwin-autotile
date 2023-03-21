@@ -4,7 +4,7 @@
     <group name="">
         <entry name="UseWhitelist" type="bool"><default>false</default></entry>
         <entry name="Blacklist" type="string"><default>krunner,yakuake</default></entry>
-        <entry name="TileDialogs" type="bool"><default>false</default></entry>
+        <entry name="TilePopups" type="bool"><default>false</default></entry>
         <entry name="Debug" type="bool"><default>false</default></entry>
         <entry name="Borders" type="int"><default>1</default></entry>
         <entry name="InvertInsertion" type="bool"><default>false</default></entry>

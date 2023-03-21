@@ -43,8 +43,8 @@ function doTileClient(client) {
     if ((client.popupWindow || client.transient) && !tilePopups) {
         return false;
     }
-    // check if client is normal, with exception for popups and transients
-    if (!(client.normalWindow || client.popupWindow || client.transient)) {
+    // check if client is a dock or something
+    if (client.specialWindow) {
         return false;
     }
     let c = client.resourceClass.toString();

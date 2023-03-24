@@ -4,6 +4,7 @@ let blacklist;
 let tilePopups;
 let borders;
 let invertInsertion;
+let keepTiledBelow
 let blacklistCache;
 
 function printDebug(str, isError) {
@@ -17,10 +18,11 @@ function printDebug(str, isError) {
 let updateConfig = function() {
     debug = readConfig("Debug", false);
     useWhitelist = readConfig("UseWhitelist", false);
-    blacklist = readConfig("Blacklist", "krunner,yakuake").split(',').map(x => x.trim());
+    blacklist = readConfig("Blacklist", "krunner, yakuake, kded, polkit").split(',').map(x => x.trim());
     tilePopups = readConfig("TilePopups", false);
     borders = readConfig("Borders", 1);
     invertInsertion = readConfig("InvertInsertion", false);
+    keepTiledBelow = readConfig("KeepTiledBelow", true);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
@@ -28,6 +30,7 @@ let updateConfig = function() {
     printDebug("tilePopups == " + tilePopups, false);
     printDebug("borders == " + borders, false);
     printDebug("invertInsertion == " + invertInsertion, false);
+    printDebug("keepTiledBelow == " + keepTiledBelow, false);
 }
 
 updateConfig();
@@ -79,8 +82,10 @@ function setTile(client, tile) {
     client.tile = tile;
     client.oldTile = tile;
     client.wasTiled = true;
-    client.keepBelow = true;
     client.oldDesktop = client.desktop;
+    if (keepTiledBelow) {
+        client.keepBelow = true;
+    }
     if (borders == 1 || borders == 2) {
         client.noBorder = true;
     }
@@ -169,7 +174,9 @@ function untileClient(client) {
     client.oldDesktop = client.desktop;
     client.wasTiled = false;
     client.tile = null;
-    client.keepBelow = false;
+    if (keepTiledBelow) {
+        client.keepBelow = false;
+    }
     if (borders == 1 || borders == 2) {
         client.noBorder = false;
     }
@@ -329,14 +336,17 @@ let clientUnminimized = function(client) {
 
 // special stuff to untile fullscreen clients
 let clientFullScreen = function(client, fullscreen, _user) {
-    if (fullscreen) {
-        client.keepBelow = false;
-        client.keepAbove = true;
-    } else {
+    if (!fullscreen && client.wasTiled) {
         client.keepAbove = false;
-        if (client.wasTiled) {
+        if (keepTiledBelow) {
             client.keepBelow = true;
         }
+    }
+    if (fullscreen && client.wasTiled) {
+        if (keepTiledBelow) {
+            client.keepBelow = false;
+        }
+        client.keepAbove = true;
     }
 }
 

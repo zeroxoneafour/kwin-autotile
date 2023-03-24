@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>335</width>
-    <height>154</height>
+    <height>182</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,10 +19,20 @@
      <x>10</x>
      <y>10</y>
      <width>311</width>
-     <height>130</height>
+     <height>161</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>Changes apply only after restarting KWin!</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
@@ -44,7 +54,7 @@
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Blacklist, do not tile these windows (becomes whitelist if whitelist is checked)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>krunner,yakuake</string>
+         <string>krunner, yakuake, kded, polkit</string>
         </property>
        </widget>
       </item>
@@ -104,19 +114,32 @@
         <property name="text">
          <string>Invert insertion</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="kcfg_Debug">
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Spams your user journal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
+       <widget class="QCheckBox" name="kcfg_KeepTiledBelow">
         <property name="text">
-         <string>Debug Mode</string>
+         <string>Keep tiled below</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="kcfg_Debug">
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Spams your user journal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Debug Mode</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

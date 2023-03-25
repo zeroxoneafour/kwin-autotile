@@ -4,7 +4,7 @@ let blacklist;
 let tilePopups;
 let borders;
 let invertInsertion;
-let keepTiledBelow
+let keepTiledBelow;
 let blacklistCache;
 
 function printDebug(str, isError) {

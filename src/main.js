@@ -191,6 +191,15 @@ let desktopChange = function(client, desktop) {
     }
 }
 
+let screenChange = function() {
+    let client = this;
+    printDebug("Screen changed on " + client.resourceClass, false);
+    if (client.wasTiled) {
+        untileClient(client);
+        tileClient(client);
+    }
+}
+
 let geometryChange = function(client, _oldgeometry) {
     // if removed from tile
     if (client.wasTiled && client.tile == null) {
@@ -215,7 +224,7 @@ let geometryChange = function(client, _oldgeometry) {
         } else {
             // find a tile with a parent that has windows so we can insert it
             printDebug(client.resourceClass + " was moved back into a tile without windows", false);
-            while (windowsOnDesktop(tile.parent, client.desktop).length == 0) {
+            while (tile.parent != undefined && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
                 tile = tile.parent;
             }
             putClientInTile(client, tile);
@@ -231,6 +240,7 @@ function tileClient(client) {
     if (client.hasBeenTiled == undefined) {
         client.frameGeometryChanged.connect(geometryChange);
         client.desktopPresenceChanged.connect(desktopChange);
+        client.screenChanged.connect(screenChange.bind(client));
         client.hasBeenTiled = true;
     }
     let targetTile = null;

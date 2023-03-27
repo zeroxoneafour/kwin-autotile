@@ -1,9 +1,10 @@
 NAME = autotile
-VERSION = 1.1.0
+VERSION = 1.1.1
 
 PKGFILE = $(NAME).kwinscript
 PKGDIR = pkg
 
+all: build install
 
 build: res src
 	zip -r $(PKGFILE) $(PKGDIR)

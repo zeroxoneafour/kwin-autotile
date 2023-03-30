@@ -21,7 +21,7 @@ let updateConfig = function() {
     blacklist = readConfig("Blacklist", "krunner, yakuake, kded, polkit").split(',').map(x => x.trim());
     tilePopups = readConfig("TilePopups", false);
     borders = readConfig("Borders", 1);
-    invertInsertion = readConfig("InvertInsertion", false);
+    invertInsertion = readConfig("InvertInsertion", true);
     keepTiledBelow = readConfig("KeepTiledBelow", true);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
@@ -78,7 +78,6 @@ function windowsOnDesktop(tile, desktop) {
 
 // forcibly sets tile, for use almost exclusively with putClientInTile
 function setTile(client, tile) {
-    client.tile = null;
     client.tile = tile;
     client.oldTile = tile;
     client.wasTiled = true;
@@ -182,9 +181,8 @@ function untileClient(client) {
     }
 }
 
-let desktopChange = function(client, desktop) {
-    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + desktop, false);
-    client.oldDesktop = desktop;
+let desktopChange = function(client, _desktop) {
+    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + client.oldDesktop, false);
     if (client.wasTiled) {
         untileClient(client);
         tileClient(client);
@@ -237,12 +235,6 @@ function tileClient(client) {
     // have to put this here so that there won't be a race condition between geometryChange and any function that also calls this
     client.wasTiled = true;
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
-    if (client.hasBeenTiled == undefined) {
-        client.frameGeometryChanged.connect(geometryChange);
-        client.desktopPresenceChanged.connect(desktopChange);
-        client.screenChanged.connect(screenChange.bind(client));
-        client.hasBeenTiled = true;
-    }
     let targetTile = null;
     let stack = [rootTile];
     // we need to check if any tiles at all have windows so if they dont we can place the client on the root window
@@ -283,13 +275,14 @@ function tileClient(client) {
     }
     if (targetTile != null) {
         putClientInTile(client, targetTile);
-        if (client.hasBeenTiled == undefined) {
-            client.frameGeometryChanged.connect(geometryChange);
-            client.desktopPresenceChanged.connect(desktopChange);
-            client.hasBeenTiled = true;
-        }
     } else {
         client.wasTiled = false;
+    }
+    if (client.hasBeenTiled == undefined) {
+        client.frameGeometryChanged.connect(geometryChange);
+        client.desktopPresenceChanged.connect(desktopChange);
+        client.screenChanged.connect(screenChange.bind(client));
+        client.hasBeenTiled = true;
     }
 }
 

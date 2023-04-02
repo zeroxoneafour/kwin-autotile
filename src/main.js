@@ -404,7 +404,7 @@ let clientUnminimized = function(client) {
     if (client.wasTiled) {
         printDebug("Client " + client.resourceClass + " unminimized", false);
         // if tile can be split, put window back in its original place
-        if (windowsOnDesktop(client.oldTile.parent, client.desktop).length != 0) {
+        if (client.oldTile.parent != undefined && windowsOnDesktop(client.oldTile.parent, client.desktop).length != 0) {
             putClientInTile(client, client.oldTile);
         } else {
             tileClient(client);

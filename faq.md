@@ -6,7 +6,7 @@ To file a bug report (not a feature request), if possible, you need a journalctl
 1. Enabling debug mode in the settings
 2. Restarting KWin (usually done by logging out and back in)
 3. Recreating the problematic action
-4. Executing the command `journalctl --user --no-pager -e | grep "Autotile DBG"` in a terminal
+4. Executing the command `journalctl --user --no-pager -e | grep "Autotile"` in a terminal
 
 In the not-so-distant future, these logs will be _required_ to submit a bug report. Any bug reports without them **will not be evaluated**.
 
@@ -44,8 +44,14 @@ Configures how borders around windows should be set up.
 ### invert insertion (check box)
 Windows will be inserted (by default) to the right instead of to the left, keeping the first window in its original place.
 
+### insertion method (dropdown)
+The method that new windows are inserted with. Bottom up is experimental, breadth-first is the recommended but slower method.
+
 ### keep tiled below (check box)
 Tiled windows will be kept below other windows.
+
+### keep fullscreen above (check box)
+Whether to keep fullscreened windows above other windows.
 
 ### debug mode (check box)
 This will print debug messages every time an action is performed.

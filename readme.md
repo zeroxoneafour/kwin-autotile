@@ -14,6 +14,9 @@ Autotiling for KWin using heavy inspiration from [kwin-tiling-scripts](https://i
 * More than 1 window in a single tile will cause untested and most likely undesireable behavior
 * While the author does not test on multiple screens, others have reported that it works perfectly fine.
 
+## faq
+Before reporting an issue, please take a look at the [faq](faq.md). This may resolve your issue.
+
 ## contributing
 I think that this script is stable, but if there are any fixes or additions you will like I will be more than happy to add them.
 

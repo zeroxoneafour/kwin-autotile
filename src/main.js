@@ -1,11 +1,17 @@
+// config options
 let debug;
 let useWhitelist;
 let blacklist;
 let tilePopups;
 let borders;
 let invertInsertion;
+let insertMethod;
 let keepTiledBelow;
+let keepFullscreenAbove;
+
+// caches of stuff to make operations faster
 let blacklistCache;
+let bottomTileCache = new Map();
 
 function printDebug(str, isError) {
     if (isError) {
@@ -22,7 +28,9 @@ let updateConfig = function() {
     tilePopups = readConfig("TilePopups", false);
     borders = readConfig("Borders", 1);
     invertInsertion = readConfig("InvertInsertion", true);
+    insertMethod = readConfig("InsertMethod", 0);
     keepTiledBelow = readConfig("KeepTiledBelow", true);
+    keepFullscreenAbove = readConfig("KeepFullscreenAbove", true);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("useWhitelist == " + useWhitelist, false);
@@ -30,7 +38,9 @@ let updateConfig = function() {
     printDebug("tilePopups == " + tilePopups, false);
     printDebug("borders == " + borders, false);
     printDebug("invertInsertion == " + invertInsertion, false);
+    printDebug("insertMethod == " + insertMethod, false);
     printDebug("keepTiledBelow == " + keepTiledBelow, false);
+    printDebug("keepFullscreenAbove == " + keepFullscreenAbove, false);
 }
 
 updateConfig();
@@ -89,6 +99,7 @@ function setTile(client, tile) {
         client.noBorder = true;
     }
 }
+
 
 // sets tile and moves things around a bit if needed
 function putClientInTile(client, tile) {
@@ -230,17 +241,12 @@ let geometryChange = function(client, _oldgeometry) {
     }
 }
 
-// add a client to the root tile, splitting tiles if needed
-function tileClient(client) {
-    // have to put this here so that there won't be a race condition between geometryChange and any function that also calls this
-    client.wasTiled = true;
+function findTileBreadthFirst(client) {
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     let targetTile = null;
     let stack = [rootTile];
     // we need to check if any tiles at all have windows so if they dont we can place the client on the root window
     let hasWindows = false;
-    // breadth-first search for open tiles, starting at the root tile and working progressively smaller
-    // works kind of i guess? dont try with more than ~5-6 tiles
     mainloop: while (stack.length != 0) {
         let stackNext = [];
         for (t of stack) {
@@ -269,9 +275,75 @@ function tileClient(client) {
         }
         stack = stackNext;
     }
-    // if there are no windows on the page, set tile to the root tile
     if (!hasWindows) {
         targetTile = rootTile;
+    }
+    return targetTile;
+}
+// use bind and bind this to the screen of the root tile
+function buildBottomTileCache(scr) {
+    printDebug("Building bottom tile cache for screen " + scr, false);
+    let rootTile = workspace.tilingForScreen(scr).rootTile;
+    let bottomTiles = [];
+    // finds all the bottom tiles (tiles with no children)
+    let stack = [rootTile];
+    // this gets to be so small because most code is in the putClientInTile function
+    while (stack.length != 0) {
+        let stackNext = [];
+        for (t of stack) {
+            if (t.tiles.length == 0) {
+                bottomTiles.push(t);
+            } else {
+                stackNext = stackNext.concat(t.tiles);
+            }
+        }
+        stack = stackNext;
+    }
+    bottomTileCache.set(scr, bottomTiles);
+}
+function findTileBottomUp(client) {
+    let bottomTiles = bottomTileCache.get(client.screen);
+    if (invertInsertion) {
+        bottomTiles.reverse();
+    }
+    let tile = null;
+    for (t of bottomTiles) {
+        if (windowsOnDesktop(t, client.desktop) == 0) {
+            tile = t;
+            break;
+        }
+    }
+    if (tile != null) {
+        while (tile.parent != undefined && windowsOnDesktop(t.parent, client.desktop) == 0) {
+            tile = tile.parent;
+        }
+    }
+    return tile;
+}
+
+// add a client to the root tile, splitting tiles if needed
+function tileClient(client) {
+    // have to put this here so that there won't be a race condition between geometryChange and any function that also calls this
+    client.wasTiled = true;
+    let targetTile;
+    switch (insertMethod) {
+        case 0: {
+            targetTile = findTileBreadthFirst(client);
+            break;
+        }
+        case 1: {
+            // for some reason "screen" gets highlighted in purple in kate, so im not using it
+            let scr = client.screen;
+            if (bottomTileCache.get(scr) == undefined) {
+                buildBottomTileCache(scr); // to set local "this" to the screen
+                // for future layout changes
+                let rootTile = workspace.tilingForScreen(scr).rootTile;
+                rootTile.layoutModified.connect(buildBottomTileCache.bind(this, scr));
+            }
+            targetTile = findTileBottomUp(client);
+            break;
+        }
+        default: printDebug("Invalid insertion method", true);
     }
     if (targetTile != null) {
         putClientInTile(client, targetTile);
@@ -288,7 +360,7 @@ function tileClient(client) {
 
 let addClient = function(client) {
     if (doTileClient(client)) {
-        printDebug("Tiling client " + client.resourceClass, false);
+        printDebug("Tiling client " + client.resourceClass + " on screen " + client.screen, false);
         tileClient(client);
     }
     if (borders == 0) {
@@ -298,7 +370,7 @@ let addClient = function(client) {
 
 let removeClient = function(client) {
     if (client.tile != null) {
-        printDebug("Removing client " + client.resourceClass, false);
+        printDebug("Removing client " + client.resourceClass + " from screen " + client.screen, false);
         untileClient(client, client.desktop);
     }
 }

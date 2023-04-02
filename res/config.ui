@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>335</width>
-    <height>182</height>
+    <height>222</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>10</x>
      <y>10</y>
      <width>311</width>
-     <height>161</height>
+     <height>201</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -107,6 +107,36 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
+       <widget class="QCheckBox" name="kcfg_KeepTiledBelow">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whether to keep tiled windows below floating windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Keep tiled below</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="kcfg_KeepFullscreenAbove">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Whether to keep fullscreen windows above other windows&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Keep fullscreen above</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
        <widget class="QCheckBox" name="kcfg_InvertInsertion">
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Invert the side that windows are inserted into&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -120,13 +150,23 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="kcfg_KeepTiledBelow">
-        <property name="text">
-         <string>Keep tiled below</string>
+       <widget class="QComboBox" name="kcfg_InsertMethod">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;How new tiles are inserted&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
-        <property name="checked">
-         <bool>true</bool>
+        <property name="currentIndex">
+         <number>0</number>
         </property>
+        <item>
+         <property name="text">
+          <string>Breadth-First</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Bottom Up</string>
+         </property>
+        </item>
        </widget>
       </item>
      </layout>

@@ -66,7 +66,7 @@ function doTileClient(client) {
         return useWhitelist;
     }
     // check if client is black/whitelisted
-    for (i of blacklist) {
+    for (const i of blacklist) {
         if (c.includes(i) || i.includes(c)) {
             blacklistCache.add(c);
             return useWhitelist;
@@ -78,7 +78,7 @@ function doTileClient(client) {
 // gets windows on desktop because tiles share windows across several desktops
 function windowsOnDesktop(tile, desktop) {
     let ret = [];
-    for (w of tile.windows) {
+    for (let w of tile.windows) {
         if (w.desktop == desktop || w.desktop == -1) {
             ret.push(w);
         }
@@ -112,7 +112,7 @@ function putClientInTile(client, tile) {
         } else {
             sibling = parent.tiles[0];
         }
-        for (w of windowsOnDesktop(parent, client.desktop)) {
+        for (let w of windowsOnDesktop(parent, client.desktop)) {
             setTile(w, sibling);
         }
     }
@@ -137,7 +137,7 @@ function untileClient(client) {
         // only use windows on our virtual desktop
         let windows = windowsOnDesktop(sibling, client.oldDesktop);
         if (windows.length != 0) {
-            for (w of windows) {
+            for (let w of windows) {
                 setTile(w, parent);
             }
         } else {
@@ -146,7 +146,7 @@ function untileClient(client) {
             mainloop: while (stack.length > 0) {
                 let stackNext = [];
                 // indent over 9000
-                for (t of stack) {
+                for (const t of stack) {
                     // try to find binary-split window
                     if (t.tiles.length == 2) {
                         let t0;
@@ -165,11 +165,11 @@ function untileClient(client) {
                         let t1_windows = windowsOnDesktop(t1, client.oldDesktop);
                         if (t0_windows.length != 0 && t1_windows.length != 0) {
                             // move windows from one tile to fill in gap
-                            for (w of t0_windows) {
+                            for (let w of t0_windows) {
                                 setTile(w, client.oldTile);
                             }
                             // move windows in other tile to fill in gap created from moving original windows
-                            for (w of t1_windows) {
+                            for (let w of t1_windows) {
                                 setTile(w, t);
                             }
                             break mainloop;
@@ -212,7 +212,7 @@ let screenChange = function() {
 let geometryChange = function(client, _oldgeometry) {
     // if removed from tile
     if (client.wasTiled && client.tile == null) {
-        printDebug(client.resourceClass + " was moved out of a tile");
+        printDebug(client.resourceClass + " was moved out of a tile", false);
         untileClient(client);
         client.wasTiled = false;
         return;
@@ -224,7 +224,7 @@ let geometryChange = function(client, _oldgeometry) {
         if (windowsOnDesktop(tile, client.desktop).length > 1) {
             // if the tile already has windows, then just swap their positions
             printDebug(client.resourceClass + " was moved back into a tile with windows", false);
-            for (w of windowsOnDesktop(tile, client.desktop)) {
+            for (let w of windowsOnDesktop(tile, client.desktop)) {
                 if (w != client) {
                     putClientInTile(w, client.oldTile);
                 }
@@ -249,7 +249,7 @@ function findTileBreadthFirst(client) {
     let hasWindows = false;
     mainloop: while (stack.length != 0) {
         let stackNext = [];
-        for (t of stack) {
+        for (const t of stack) {
             // have to separate windows by virtual desktop because tiling affects on screen basis
             let t_windows = windowsOnDesktop(t, client.desktop);
             // see has_windows comment
@@ -260,6 +260,10 @@ function findTileBreadthFirst(client) {
             if (t_windows.length == 0 && t.tiles.length == 0) {
                 targetTile = t;
                 break mainloop;
+            }
+            // tell the user they're wrong if they have invalid tile configuration
+            if (!(t.tiles.length == 0 || t.tiles.length == 2)) {
+                printDebug("Invalid tile configuration, " + t.tiles.length + " tiles detected", true);
             }
             // check if there is only one window and the tile is binary-splittable
             if (t_windows.length != 0 && t.tiles.length == 2) {
@@ -289,7 +293,7 @@ function buildBottomTileCache(rootTile) {
     // this gets to be so small because most code is in the putClientInTile function
     while (stack.length != 0) {
         let stackNext = [];
-        for (t of stack) {
+        for (const t of stack) {
             if (t.tiles.length == 0) {
                 bottomTiles.push(t);
             } else {
@@ -308,14 +312,14 @@ function findTileBottomUp(client) {
         bottomTiles.reverse();
     }
     let tile = null;
-    for (t of bottomTiles) {
-        if (windowsOnDesktop(t, client.desktop) == 0) {
+    for (const t of bottomTiles) {
+        if (windowsOnDesktop(t, client.desktop).length == 0) {
             tile = t;
             break;
         }
     }
     if (tile != null) {
-        while (tile.parent != undefined && windowsOnDesktop(tile.parent, client.desktop) == 0) {
+        while (tile.parent != undefined && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
             tile = tile.parent;
         }
     }
@@ -400,7 +404,7 @@ let clientUnminimized = function(client) {
     if (client.wasTiled) {
         printDebug("Client " + client.resourceClass + " unminimized", false);
         // if tile can be split, put window back in its original place
-        if (windowsOnDesktop(client.oldTile.parent, client.desktop) != 0) {
+        if (windowsOnDesktop(client.oldTile.parent, client.desktop).length != 0) {
             putClientInTile(client, client.oldTile);
         } else {
             tileClient(client);

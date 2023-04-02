@@ -281,9 +281,8 @@ function findTileBreadthFirst(client) {
     return targetTile;
 }
 // use bind and bind this to the screen of the root tile
-function buildBottomTileCache(scr) {
-    printDebug("Building bottom tile cache for screen " + scr, false);
-    let rootTile = workspace.tilingForScreen(scr).rootTile;
+function buildBottomTileCache(rootTile) {
+    printDebug("Building bottom tile cache for root tile " + rootTile, false);
     let bottomTiles = [];
     // finds all the bottom tiles (tiles with no children)
     let stack = [rootTile];
@@ -299,10 +298,12 @@ function buildBottomTileCache(scr) {
         }
         stack = stackNext;
     }
-    bottomTileCache.set(scr, bottomTiles);
+    bottomTileCache.set(rootTile, bottomTiles);
 }
 function findTileBottomUp(client) {
-    let bottomTiles = bottomTileCache.get(client.screen);
+    let rootTile = workspace.tilingForScreen(client.screen).rootTile;
+    // use array constructor to avoid reference
+    let bottomTiles = Array.from(bottomTileCache.get(rootTile));
     if (invertInsertion) {
         bottomTiles.reverse();
     }
@@ -314,7 +315,7 @@ function findTileBottomUp(client) {
         }
     }
     if (tile != null) {
-        while (tile.parent != undefined && windowsOnDesktop(t.parent, client.desktop) == 0) {
+        while (tile.parent != undefined && windowsOnDesktop(tile.parent, client.desktop) == 0) {
             tile = tile.parent;
         }
     }
@@ -332,13 +333,11 @@ function tileClient(client) {
             break;
         }
         case 1: {
-            // for some reason "screen" gets highlighted in purple in kate, so im not using it
-            let scr = client.screen;
-            if (bottomTileCache.get(scr) == undefined) {
-                buildBottomTileCache(scr); // to set local "this" to the screen
+            let rootTile = workspace.tilingForScreen(client.screen).rootTile;
+            if (bottomTileCache.get(rootTile) == undefined) {
+                buildBottomTileCache(rootTile); // to set local "this" to the screen
                 // for future layout changes
-                let rootTile = workspace.tilingForScreen(scr).rootTile;
-                rootTile.layoutModified.connect(buildBottomTileCache.bind(this, scr));
+                rootTile.layoutModified.connect(buildBottomTileCache.bind(this, rootTile));
             }
             targetTile = findTileBottomUp(client);
             break;
@@ -412,7 +411,9 @@ let clientUnminimized = function(client) {
 // special stuff to untile fullscreen clients
 let clientFullScreen = function(client, fullscreen, _user) {
     if (!fullscreen && client.wasTiled) {
-        client.keepAbove = false;
+        if (keepFullscreenAbove) {
+            client.keepAbove = false;
+        }
         if (keepTiledBelow) {
             client.keepBelow = true;
         }
@@ -421,7 +422,9 @@ let clientFullScreen = function(client, fullscreen, _user) {
         if (keepTiledBelow) {
             client.keepBelow = false;
         }
-        client.keepAbove = true;
+        if (keepFullscreenAbove) {
+            client.keepAbove = true;
+        }
     }
 }
 

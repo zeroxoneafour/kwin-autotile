@@ -94,6 +94,10 @@ function setTile(client: KWin.AbstractClient, tile: KWin.Tile) {
         client.frameGeometryChanged.connect(geometryChange);
         client.desktopPresenceChanged.connect(desktopChange);
         client.screenChanged.connect(screenChange.bind(client));
+    } else {
+        client.addons.oldTile = client.tile;
+        client.addons.wasTiled = true;
+        client.addons.oldDesktop = client.desktop;
     }
     if (keepTiledBelow) {
         client.keepBelow = true;

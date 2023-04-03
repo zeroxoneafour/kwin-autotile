@@ -1,0 +1,12 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "target": "es2021",
+        "outFile": "autotile.js",
+        "noEmitOnError": false,
+        "removeComments": true,
+        "lib": ["es2021"],
+        "alwaysStrict": true,
+        "strict": true
+    }
+}

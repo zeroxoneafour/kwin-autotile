@@ -1,9 +1,24 @@
+namespace KWin {
+    export class AbstractClientAddons {
+        // custom stuff, not in base kwin scripts
+        oldTile: KWin.Tile
+        wasTiled: boolean
+        oldDesktop: number
+        constructor(tile: KWin.Tile, desktop: number) {
+            this.oldTile = tile;
+            this.wasTiled = true;
+            this.oldDesktop = desktop;
+        }
+    }
+}
+
 declare namespace KWin {
     class Toplevel {
         readonly popupWindow: boolean
         readonly frameGeometry: Qt.QRect
         readonly desktop: number
-        frameGeometryChanged: Signal<(client: Toplevel, oldGeometry: Qt.QRect) => void>
+        frameGeometryChanged: Signal<(client: AbstractClient, oldGeometry: Qt.QRect) => void>
+        screenChanged: Signal<() => void>
     }
     class AbstractClient extends Toplevel {
         readonly resizeable: boolean
@@ -17,23 +32,33 @@ declare namespace KWin {
         fullScreen: boolean
         resourceClass: Qt.QByteArray
         screen: number
+        // custom tiling stuff that isnt in base kwin but we need it
+        addons: AbstractClientAddons | undefined
+        //signals
+        desktopPresenceChanged: Signal<(client: AbstractClient, desktop: number) => void>
     }
     class Tile {
         tiles: Array<Tile>
         windows: Array<AbstractClient>
-        // undef for root tile
-        parent: Tile | undefined
+        // null for root tile
+        parent: Tile | null
+        padding: number
     }
     class RootTile extends Tile {
-        parent: undefined
+        parent: null
         layoutModified: Signal<() => void>
     }
     class TileManager {
         rootTile: RootTile
+        bestTileForPosition(x: number, y: number): Tile
     }
+
     class WorkspaceWrapper {
         readonly activeScreen: number
+        activeClient: AbstractClient | null
         tilingForScreen(desktop: number): KWin.TileManager
+        // doesnt actually exist in api, i made it up
+        lastActiveClient: AbstractClient | null | undefined
         // signals
         clientAdded: Signal<(client: KWin.AbstractClient) => void>
         clientRemoved: Signal<(client: KWin.AbstractClient) => void>
@@ -43,4 +68,8 @@ declare namespace KWin {
         // idk what user does
         clientFullScreenSet: Signal<(client: KWin.AbstractClient, fullscreen: boolean, user: any) => void>
     }
+    class Options {
+        configChanged: Signal<() => void>
+    }
 }
+

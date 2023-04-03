@@ -1,5 +1,5 @@
 NAME = autotile
-VERSION = 1.2.0
+VERSION = 1.2.1
 
 PKGFILE = $(NAME).kwinscript
 PKGDIR = pkg
@@ -29,7 +29,8 @@ res: $(PKGDIR)
 	sed -i "s/%VERSION%/$(VERSION)/" $(PKGDIR)/metadata.json
 
 src: $(PKGDIR)
-	cd src; cat $(shell ls src) > ../$(PKGDIR)/contents/code/main.js
+	tsc
+	mv autotile.js pkg/contents/code/main.js
 
 $(PKGDIR):
 	mkdir -p $(PKGDIR)

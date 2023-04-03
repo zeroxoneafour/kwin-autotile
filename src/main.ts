@@ -24,7 +24,7 @@ function printDebug(str: string, isError: boolean) {
 let updateConfig = function() {
     debug = readConfig("Debug", false);
     useWhitelist = readConfig("UseWhitelist", false);
-    blacklist = readConfig("Blacklist", "krunner, yakuake, kded, polkit").split(',').map(x => x.trim());
+    blacklist = readConfig("Blacklist", "krunner, yakuake, kded, polkit").split(',').map((x: string) => x.trim());
     tilePopups = readConfig("TilePopups", false);
     borders = readConfig("Borders", 1);
     invertInsertion = readConfig("InvertInsertion", true);
@@ -77,21 +77,24 @@ function doTileClient(client: KWin.AbstractClient) {
 
 // gets windows on desktop because tiles share windows across several desktops
 function windowsOnDesktop(tile: KWin.Tile, desktop: number) {
-    let ret: Array<ManagedClient> = [];
+    let ret: Array<KWin.AbstractClient> = [];
     for (const w of tile.windows) {
         if (w.desktop == desktop || w.desktop == -1) {
-            ret.push(w as ManagedClient);
+            ret.push(w as KWin.AbstractClient);
         }
     }
     return ret;
 }
 
 // forcibly sets tile, for use almost exclusively with putClientInTile
-function setTile(client: ManagedClient, tile: KWin.Tile) {
+function setTile(client: KWin.AbstractClient, tile: KWin.Tile) {
     client.tile = tile;
-    client.oldTile = tile;
-    client.wasTiled = true;
-    client.oldDesktop = client.desktop;
+    if (client.addons == undefined) {
+        client.addons = new KWin.AbstractClientAddons(client.tile, client.desktop);
+        client.frameGeometryChanged.connect(geometryChange);
+        client.desktopPresenceChanged.connect(desktopChange);
+        client.screenChanged.connect(screenChange.bind(client));
+    }
     if (keepTiledBelow) {
         client.keepBelow = true;
     }
@@ -102,9 +105,9 @@ function setTile(client: ManagedClient, tile: KWin.Tile) {
 
 
 // sets tile and moves things around a bit if needed
-function putClientInTile(client: ManagedClient, tile: KWin.Tile) {
+function putClientInTile(client: KWin.AbstractClient, tile: KWin.Tile) {
     // case for non-root tiles
-    if (tile.parent != undefined) {
+    if (tile.parent != null) {
         let parent = tile.parent;
         let sibling: KWin.Tile;
         if (tile == parent.tiles[0]) {
@@ -120,22 +123,22 @@ function putClientInTile(client: ManagedClient, tile: KWin.Tile) {
 }
 
 // untile a client (ill refactor this later)
-function untileClient(client: ManagedClient) {
-    if (!client.wasTiled) {
+function untileClient(client: KWin.AbstractClient) {
+    if (client.addons == undefined || !client.addons.wasTiled) {
         return;
     }
     // if root tile then make sure the loop doesnt fail
-    if (client.oldTile.parent != undefined) {
-        let parent = client.oldTile.parent;
+    if (client.addons.oldTile.parent != null) {
+        let parent = client.addons.oldTile.parent;
         let sibling: KWin.Tile;
         // get the parent and merge its child tile's window back into the parent to fill empty space
-        if (client.oldTile == parent.tiles[0]) {
+        if (client.addons.oldTile == parent.tiles[0]) {
             sibling = parent.tiles[1];
         } else {
             sibling = parent.tiles[0];
         }
         // only use windows on our virtual desktop
-        let windows = windowsOnDesktop(sibling, client.oldDesktop);
+        let windows = windowsOnDesktop(sibling, client.addons.oldDesktop);
         if (windows.length != 0) {
             for (let w of windows) {
                 setTile(w, parent);
@@ -161,12 +164,12 @@ function untileClient(client: ManagedClient) {
                         } else {
                             t1 = t.tiles[1];
                         }
-                        let t0_windows = windowsOnDesktop(t0, client.oldDesktop);
-                        let t1_windows = windowsOnDesktop(t1, client.oldDesktop);
+                        let t0_windows = windowsOnDesktop(t0, client.addons.oldDesktop);
+                        let t1_windows = windowsOnDesktop(t1, client.addons.oldDesktop);
                         if (t0_windows.length != 0 && t1_windows.length != 0) {
                             // move windows from one tile to fill in gap
                             for (let w of t0_windows) {
-                                setTile(w, client.oldTile);
+                                setTile(w, client.addons.oldTile);
                             }
                             // move windows in other tile to fill in gap created from moving original windows
                             for (let w of t1_windows) {
@@ -181,8 +184,8 @@ function untileClient(client: ManagedClient) {
             }
         }
     }
-    client.oldDesktop = client.desktop;
-    client.wasTiled = false;
+    client.addons.oldDesktop = client.desktop;
+    client.addons.wasTiled = false;
     client.tile = null;
     if (keepTiledBelow) {
         client.keepBelow = false;
@@ -192,48 +195,48 @@ function untileClient(client: ManagedClient) {
     }
 }
 
-let desktopChange = function(client: ManagedClient, _desktop: number) {
-    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + client.oldDesktop, false);
-    if (client.wasTiled) {
+let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
+    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + desktop, false);
+    if (client.addons != undefined && client.addons.wasTiled) {
         untileClient(client);
         tileClient(client);
     }
 }
 
-let screenChange = function() {
+let screenChange = function(this: KWin.AbstractClient) {
     let client = this;
     printDebug("Screen changed on " + client.resourceClass, false);
-    if (client.wasTiled) {
+    if (client.addons != undefined && client.addons.wasTiled) {
         untileClient(client);
         tileClient(client);
     }
 }
 
-let geometryChange = function(client: ManagedClient, _oldgeometry: number) {
+let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRect) {
     // if removed from tile
-    if (client.wasTiled && client.tile == null) {
+    if (client.addons != undefined && client.addons.wasTiled && client.tile == null) {
         printDebug(client.resourceClass + " was moved out of a tile", false);
         untileClient(client);
-        client.wasTiled = false;
+        client.addons!.wasTiled = false;
         return;
     }
     // if added to tile
-    if (client.tile != null && !client.wasTiled) {
+    if ((client.addons == undefined || !client.addons.wasTiled) && client.tile != null) {
         let tile = client.tile;
         // 1 because of self window
         if (windowsOnDesktop(tile, client.desktop).length > 1) {
             // if the tile already has windows, then just swap their positions
             printDebug(client.resourceClass + " was moved back into a tile with windows", false);
             for (let w of windowsOnDesktop(tile, client.desktop)) {
-                if (w != client) {
-                    putClientInTile(w, client.oldTile);
+                if (w != client && client.addons != undefined) {
+                    putClientInTile(w, client.addons.oldTile);
                 }
             }
             setTile(client, tile);
         } else {
             // find a tile with a parent that has windows so we can insert it
             printDebug(client.resourceClass + " was moved back into a tile without windows", false);
-            while (tile.parent != undefined && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
+            while (tile.parent != null && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
                 tile = tile.parent;
             }
             putClientInTile(client, tile);
@@ -241,10 +244,10 @@ let geometryChange = function(client: ManagedClient, _oldgeometry: number) {
     }
 }
 
-function findTileBreadthFirst(client: ManagedClient) {
+function findTileBreadthFirst(client: KWin.AbstractClient) {
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     let targetTile: KWin.Tile | null = null;
-    let stack = [rootTile];
+    let stack: Array<KWin.Tile> = [rootTile];
     // we need to check if any tiles at all have windows so if they dont we can place the client on the root window
     let hasWindows = false;
     mainloop: while (stack.length != 0) {
@@ -281,7 +284,7 @@ function findTileBreadthFirst(client: ManagedClient) {
     return targetTile;
 }
 // use bind and bind this to the screen of the root tile
-function buildBottomTileCache(rootTile: KWin.Tile) {
+function buildBottomTileCache(this: any, rootTile: KWin.Tile) {
     printDebug("Building bottom tile cache for root tile " + rootTile, false);
     let bottomTiles: Array<KWin.Tile> = [];
     // finds all the bottom tiles (tiles with no children)
@@ -300,7 +303,7 @@ function buildBottomTileCache(rootTile: KWin.Tile) {
     }
     bottomTileCache.set(rootTile, bottomTiles);
 }
-function findTileBottomUp(client: ManagedClient) {
+function findTileBottomUp(client: KWin.AbstractClient) {
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     // use array constructor to avoid reference
     let bottomTiles: Array<KWin.Tile>;
@@ -330,9 +333,11 @@ function findTileBottomUp(client: ManagedClient) {
 }
 
 // add a client to the root tile, splitting tiles if needed
-function tileClient(client: ManagedClient) {
+function tileClient(this: any, client: KWin.AbstractClient) {
     // have to put this here so that there won't be a race condition between geometryChange and any function that also calls this
-    client.wasTiled = true;
+    if (client.addons != undefined) {
+        client.addons.wasTiled = true;
+    }
     let targetTile;
     switch (insertMethod) {
         case 0: {
@@ -351,21 +356,16 @@ function tileClient(client: ManagedClient) {
         }
         default: printDebug("Invalid insertion method", true);
     }
+
     if (targetTile != null) {
         putClientInTile(client, targetTile);
     } else {
-        client.wasTiled = false;
-    }
-    if (client.hasBeenTiled == undefined) {
-        client.frameGeometryChanged.connect(geometryChange);
-        client.desktopPresenceChanged.connect(desktopChange);
-        client.screenChanged.connect(screenChange.bind(client));
-        client.hasBeenTiled = true;
+        if (client.addons != undefined) client.addons.wasTiled = false;
     }
 }
 
 let addClient = function(client: KWin.AbstractClient) {
-    client = client as ManagedClient;
+    client = client as KWin.AbstractClient;
     if (doTileClient(client)) {
         printDebug("Tiling client " + client.resourceClass + " on screen " + client.screen, false);
         tileClient(client);
@@ -375,15 +375,15 @@ let addClient = function(client: KWin.AbstractClient) {
     }
 }
 
-let removeClient = function(client) {
+let removeClient = function(client: KWin.AbstractClient) {
     if (client.tile != null) {
         printDebug("Removing client " + client.resourceClass + " from screen " + client.screen, false);
-        untileClient(client, client.desktop);
+        untileClient(client);
     }
 }
 
 // border stuff (github issue #1)
-let clientActivated = function(client) {
+let clientActivated = function(client: KWin.AbstractClient) {
     // for setting borders for the last active client to off when new one is activated
     if (workspace.lastActiveClient != null && workspace.lastActiveClient != undefined) {
         if (borders == 2) {
@@ -397,19 +397,20 @@ let clientActivated = function(client) {
 }
 
 // client minimized and maximized
-let clientMinimized = function(client) {
-    if (client.wasTiled) {
+let clientMinimized = function(client: KWin.AbstractClient) {
+    if (client.addons!.wasTiled) {
         printDebug("Client " + client.resourceClass + " minimized", false);
         untileClient(client);
-        client.wasTiled = true;
+        client.addons!.wasTiled = true;
     }
 };
-let clientUnminimized = function(client) {
-    if (client.wasTiled) {
+let clientUnminimized = function(client: KWin.AbstractClient) {
+    if (client.addons!.wasTiled) {
         printDebug("Client " + client.resourceClass + " unminimized", false);
         // if tile can be split, put window back in its original place
-        if (windowsOnDesktop(client.oldTile.parent, client.desktop) != 0) {
-            putClientInTile(client, client.oldTile);
+        let oldTile = client.addons!.oldTile;
+        if (oldTile.parent != null && windowsOnDesktop(oldTile.parent, client.desktop).length != 0) {
+            putClientInTile(client, client.addons!.oldTile);
         } else {
             tileClient(client);
         }
@@ -418,7 +419,7 @@ let clientUnminimized = function(client) {
 
 // special stuff to untile fullscreen clients
 let clientFullScreen = function(client: KWin.AbstractClient, fullscreen: boolean, _user: any) {
-    if (!fullscreen && client.wasTiled) {
+    if (!fullscreen && client.addons!.wasTiled) {
         if (keepFullscreenAbove) {
             client.keepAbove = false;
         }
@@ -426,7 +427,7 @@ let clientFullScreen = function(client: KWin.AbstractClient, fullscreen: boolean
             client.keepBelow = true;
         }
     }
-    if (fullscreen && client.wasTiled) {
+    if (fullscreen && client.addons!.wasTiled) {
         if (keepTiledBelow) {
             client.keepBelow = false;
         }

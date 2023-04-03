@@ -221,7 +221,7 @@ let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRec
     if (client.addons != undefined && client.addons.wasTiled && client.tile == null) {
         printDebug(client.resourceClass + " was moved out of a tile", false);
         untileClient(client);
-        client.addons!.wasTiled = false;
+        client.addons.wasTiled = false;
         return;
     }
     // if added to tile
@@ -317,7 +317,7 @@ function findTileBottomUp(client: KWin.AbstractClient) {
     let bottomTiles: Array<KWin.Tile>;
     let b = bottomTileCache.get(rootTile);
     if (b != undefined) {
-        bottomTiles = b;
+        bottomTiles = Array.from(b);
     } else {
         printDebug("No bottom tiles for screen " + client.screen, true);
         bottomTiles = [];
@@ -406,19 +406,19 @@ let clientActivated = function(client: KWin.AbstractClient) {
 
 // client minimized and maximized
 let clientMinimized = function(client: KWin.AbstractClient) {
-    if (client.addons!.wasTiled) {
+    if (client.addons != undefined && client.addons.wasTiled) {
         printDebug("Client " + client.resourceClass + " minimized", false);
         untileClient(client);
-        client.addons!.wasTiled = true;
+        client.addons.wasTiled = true;
     }
 };
 let clientUnminimized = function(client: KWin.AbstractClient) {
-    if (client.addons!.wasTiled) {
+    if (client.addons != undefined && client.addons.wasTiled) {
         printDebug("Client " + client.resourceClass + " unminimized", false);
         // if tile can be split, put window back in its original place
-        let oldTile = client.addons!.oldTile;
+        let oldTile = client.addons.oldTile;
         if (oldTile.parent != null && windowsOnDesktop(oldTile.parent, client.desktop).length != 0) {
-            putClientInTile(client, client.addons!.oldTile);
+            putClientInTile(client, client.addons.oldTile);
         } else {
             tileClient(client);
         }
@@ -427,7 +427,8 @@ let clientUnminimized = function(client: KWin.AbstractClient) {
 
 // special stuff to untile fullscreen clients
 let clientFullScreen = function(client: KWin.AbstractClient, fullscreen: boolean, _user: any) {
-    if (!fullscreen && client.addons!.wasTiled) {
+    if (client.addons == undefined) return;
+    if (!fullscreen && client.addons.wasTiled) {
         if (keepFullscreenAbove) {
             client.keepAbove = false;
         }
@@ -435,7 +436,7 @@ let clientFullScreen = function(client: KWin.AbstractClient, fullscreen: boolean
             client.keepBelow = true;
         }
     }
-    if (fullscreen && client.addons!.wasTiled) {
+    if (fullscreen && client.addons.wasTiled) {
         if (keepTiledBelow) {
             client.keepBelow = false;
         }

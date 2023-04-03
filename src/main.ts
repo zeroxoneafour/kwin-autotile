@@ -268,6 +268,10 @@ function findTileBreadthFirst(client: KWin.AbstractClient) {
                 targetTile = t;
                 break mainloop;
             }
+            // tell the user they're wrong if they have invalid tile configuration
+            if (!(t.tiles.length == 0 || t.tiles.length == 2)) {
+                printDebug("Invalid tile configuration, " + t.tiles.length + " tiles detected", true);
+            }
             // check if there is only one window and the tile is binary-splittable
             if (t_windows.length != 0 && t.tiles.length == 2) {
                 // if the insertion order is inverted, windows will be pushed to the back instead of the front

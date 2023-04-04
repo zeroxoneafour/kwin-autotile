@@ -47,7 +47,7 @@ updateConfig();
 options.configChanged.connect(updateConfig);
 
 // whether to ignore a client or not
-function doTileClient(client: KWin.AbstractClient) {
+function doTileClient(client: KWin.AbstractClient): boolean {
     // if the client is not movable, dont bother
     if (client.fullScreen || !client.moveable || !client.resizeable) {
         return false;
@@ -76,11 +76,11 @@ function doTileClient(client: KWin.AbstractClient) {
 }
 
 // gets windows on desktop because tiles share windows across several desktops
-function windowsOnDesktop(tile: KWin.Tile, desktop: number) {
+function windowsOnDesktop(tile: KWin.Tile, desktop: number): Array<KWin.AbstractClient> {
     let ret: Array<KWin.AbstractClient> = [];
     for (const w of tile.windows) {
         if (w.desktop == desktop || w.desktop == -1) {
-            ret.push(w as KWin.AbstractClient);
+            ret.push(w);
         }
     }
     return ret;
@@ -248,7 +248,7 @@ let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRec
     }
 }
 
-function findTileBreadthFirst(client: KWin.AbstractClient) {
+function findTileBreadthFirst(client: KWin.AbstractClient): KWin.Tile | null {
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     let targetTile: KWin.Tile | null = null;
     let stack: Array<KWin.Tile> = [rootTile];
@@ -292,7 +292,7 @@ function findTileBreadthFirst(client: KWin.AbstractClient) {
     return targetTile;
 }
 // use bind and bind this to the screen of the root tile
-function buildBottomTileCache(this: any, rootTile: KWin.Tile) {
+function buildBottomTileCache(rootTile: KWin.Tile) {
     printDebug("Building bottom tile cache for root tile " + rootTile, false);
     let bottomTiles: Array<KWin.Tile> = [];
     // finds all the bottom tiles (tiles with no children)
@@ -311,7 +311,12 @@ function buildBottomTileCache(this: any, rootTile: KWin.Tile) {
     }
     bottomTileCache.set(rootTile, bottomTiles);
 }
-function findTileBottomUp(client: KWin.AbstractClient) {
+// destroy the bottom tile cache, it will be rebuilt when new clients are added
+function destroyBottomTileCache(this: any, rootTile: KWin.Tile) {
+    bottomTileCache.set(rootTile, []);
+}
+// find tile from the bottom up with bottomTileCache
+function findTileBottomUp(client: KWin.AbstractClient): KWin.Tile | null {
     let rootTile = workspace.tilingForScreen(client.screen).rootTile;
     // use array constructor to avoid reference
     let bottomTiles: Array<KWin.Tile>;
@@ -320,7 +325,7 @@ function findTileBottomUp(client: KWin.AbstractClient) {
         bottomTiles = Array.from(b);
     } else {
         printDebug("No bottom tiles for screen " + client.screen, true);
-        bottomTiles = [];
+        return null;
     }
     if (invertInsertion) {
         bottomTiles.reverse();
@@ -357,7 +362,10 @@ function tileClient(this: any, client: KWin.AbstractClient) {
             if (bottomTileCache.get(rootTile) == undefined) {
                 buildBottomTileCache(rootTile); // to set local "this" to the screen
                 // for future layout changes
-                rootTile.layoutModified.connect(buildBottomTileCache.bind(this, rootTile));
+                rootTile.layoutModified.connect(destroyBottomTileCache.bind(this, rootTile));
+            // ! here because undefined is checked above, typescript compiler cannot handle this for some reason
+            } else if (bottomTileCache.get(rootTile)!.length == 0) {
+                buildBottomTileCache(rootTile);
             }
             targetTile = findTileBottomUp(client);
             break;

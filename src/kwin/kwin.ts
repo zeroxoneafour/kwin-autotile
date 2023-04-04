@@ -54,7 +54,6 @@ declare namespace KWin {
     }
 
     class WorkspaceWrapper {
-        readonly activeScreen: number
         activeClient: AbstractClient | null
         tilingForScreen(desktop: number): KWin.TileManager
         // doesnt actually exist in api, i made it up

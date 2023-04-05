@@ -1,5 +1,5 @@
 NAME = autotile
-VERSION = 1.2.1
+VERSION = 1.2.2
 
 PKGFILE = $(NAME).kwinscript
 PKGDIR = pkg

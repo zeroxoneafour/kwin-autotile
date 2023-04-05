@@ -87,13 +87,13 @@ function windowsOnDesktop(tile: KWin.Tile, desktop: number): Array<KWin.Abstract
 }
 
 // forcibly sets tile, for use almost exclusively with putClientInTile
-function setTile(client: KWin.AbstractClient, tile: KWin.Tile) {
+function setTile(this: any, client: KWin.AbstractClient, tile: KWin.Tile) {
     client.tile = tile;
     if (client.addons == undefined) {
         client.addons = new KWin.AbstractClientAddons(client.tile, client.desktop);
         client.frameGeometryChanged.connect(geometryChange);
         client.desktopPresenceChanged.connect(desktopChange);
-        client.screenChanged.connect(screenChange.bind(client));
+        client.screenChanged.connect(screenChange.bind(this, client));
     } else {
         client.addons.oldTile = client.tile;
         client.addons.wasTiled = true;
@@ -207,8 +207,7 @@ let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
     }
 }
 
-let screenChange = function(this: KWin.AbstractClient) {
-    let client = this;
+let screenChange = function(this: any, client: KWin.AbstractClient) {
     printDebug("Screen changed on " + client.resourceClass, false);
     if (client.addons != undefined && client.addons.wasTiled) {
         untileClient(client);

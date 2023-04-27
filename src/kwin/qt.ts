@@ -2,10 +2,10 @@
 
 declare namespace Qt {
     class QRect {
-        x: number
-        y: number
-        width: number
-        height: number
+        x: number;
+        y: number;
+        width: number;
+        height: number;
     }
     class QByteArray {}
 }

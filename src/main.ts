@@ -13,6 +13,21 @@ let keepFullscreenAbove: boolean;
 let blacklistCache: Set<string>;
 let bottomTileCache: Map<KWin.Tile, Array<KWin.Tile>> = new Map();
 
+// is x11
+function checkIfX11() {
+    let re = new RegExp("Operation Mode: (\\w*)");
+    // assume that the operation mode is outputted correctly
+    let opMode = re.exec(workspace.supportInformation())![1];
+    print(opMode);
+    switch (opMode) {
+        case "XWayland": return false;
+        case "Wayland": return false;
+        case "X11": return true;
+    }
+    return false;
+}
+let isX11: boolean = checkIfX11();
+
 function printDebug(str: string, isError: boolean) {
     if (isError) {
         print("Autotile ERR: " + str);
@@ -33,6 +48,7 @@ let updateConfig = function() {
     keepFullscreenAbove = readConfig("KeepFullscreenAbove", true);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
+    printDebug("Running on " + (isX11 ? "X11" : "Wayland"), false);
     printDebug("useWhitelist == " + useWhitelist, false);
     printDebug("blacklist == " + blacklist, false);
     printDebug("tilePopups == " + tilePopups, false);
@@ -75,29 +91,22 @@ function doTileClient(client: KWin.AbstractClient): boolean {
     return !useWhitelist;
 }
 
-// gets windows on desktop because tiles share windows across several desktops
-function windowsOnDesktop(tile: KWin.Tile, desktop: number): Array<KWin.AbstractClient> {
-    let ret: Array<KWin.AbstractClient> = [];
-    for (const w of tile.windows) {
-        if (w.desktop == desktop || w.desktop == -1) {
-            ret.push(w);
-        }
-    }
-    return ret;
-}
-
 // forcibly sets tile, for use almost exclusively with putClientInTile
 function setTile(this: any, client: KWin.AbstractClient, tile: KWin.Tile) {
     client.tile = tile;
-    if (client.addons == undefined) {
-        client.addons = new KWin.AbstractClientAddons(client.tile, client.desktop);
+    if (client.tilemap == undefined) {
+        client.tilemap = new Map;
         client.frameGeometryChanged.connect(geometryChange);
         client.desktopPresenceChanged.connect(desktopChange);
         client.screenChanged.connect(screenChange.bind(this, client));
-    } else {
-        client.addons.oldTile = client.tile;
-        client.addons.wasTiled = true;
-        client.addons.oldDesktop = client.desktop;
+    }
+    client.wasTiled = true;
+    // it is not possibly undefined
+    client.tilemap!.set(new KWin.TileMapKey, tile);
+    // if x11 then we need to set the window size manually (inconsistent behavior, possible kde bug?)
+    if (isX11) {
+        let geometry = calculatePaddedGeometry(tile.absoluteGeometry, tile.padding);
+        client.frameGeometry = geometry;
     }
     if (keepTiledBelow) {
         client.keepBelow = true;

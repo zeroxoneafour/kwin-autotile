@@ -7,6 +7,6 @@ declare const workspace: KWin.WorkspaceWrapper;
 declare const options: KWin.Options;
 
 declare interface Signal<T> {
-    connect(callback: T): void
-    disconnect(callback: T): void
+    connect(callback: T): void;
+    disconnect(callback: T): void;
 }

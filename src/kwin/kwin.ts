@@ -45,7 +45,7 @@ declare namespace KWin {
         frameGeometry: Qt.QRect;
         screen: number;
         // custom tiling stuff that isnt in base kwin but we need it
-        tilemap: Map<TileMapKey, Tile | null> | undefined;
+        tilemap: Map<TileMapKey, Tile> | undefined;
         wasTiled: boolean | undefined;
         //signals
         desktopPresenceChanged: Signal<(client: AbstractClient, desktop: number) => void>;

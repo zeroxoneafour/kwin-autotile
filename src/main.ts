@@ -1,124 +1,5 @@
-// config options
-let debug: boolean;
-let useWhitelist: boolean;
-let blacklist: Array<string>;
-let tilePopups: boolean;
-let borders: number;
-let invertInsertion: boolean;
-let insertMethod: number;
-let keepTiledBelow: boolean;
-let keepFullscreenAbove: boolean;
-
-// caches of stuff to make operations faster
-let blacklistCache: Set<string>;
-let bottomTileCache: Map<KWin.Tile, Array<KWin.Tile>> = new Map();
-
-// is x11
-function checkIfX11() {
-    let re = new RegExp("Operation Mode: (\\w*)");
-    // assume that the operation mode is outputted correctly
-    let opMode = re.exec(workspace.supportInformation())![1];
-    print(opMode);
-    switch (opMode) {
-        case "XWayland": return false;
-        case "Wayland": return false;
-        case "X11": return true;
-    }
-    return false;
-}
-let isX11: boolean = checkIfX11();
-
-function printDebug(str: string, isError: boolean) {
-    if (isError) {
-        print("Autotile ERR: " + str);
-    } else if (debug) {
-        print("Autotile DBG: " + str);
-    }
-}
-
-let updateConfig = function() {
-    debug = readConfig("Debug", false);
-    useWhitelist = readConfig("UseWhitelist", false);
-    blacklist = readConfig("Blacklist", "krunner, yakuake, kded, polkit").split(',').map((x: string) => x.trim());
-    tilePopups = readConfig("TilePopups", false);
-    borders = readConfig("Borders", 1);
-    invertInsertion = readConfig("InvertInsertion", true);
-    insertMethod = readConfig("InsertMethod", 0);
-    keepTiledBelow = readConfig("KeepTiledBelow", true);
-    keepFullscreenAbove = readConfig("KeepFullscreenAbove", true);
-    blacklistCache = new Set();
-    printDebug("Config Updated", false)
-    printDebug("Running on " + (isX11 ? "X11" : "Wayland"), false);
-    printDebug("useWhitelist == " + useWhitelist, false);
-    printDebug("blacklist == " + blacklist, false);
-    printDebug("tilePopups == " + tilePopups, false);
-    printDebug("borders == " + borders, false);
-    printDebug("invertInsertion == " + invertInsertion, false);
-    printDebug("insertMethod == " + insertMethod, false);
-    printDebug("keepTiledBelow == " + keepTiledBelow, false);
-    printDebug("keepFullscreenAbove == " + keepFullscreenAbove, false);
-}
-
-updateConfig();
-options.configChanged.connect(updateConfig);
-
-// whether to ignore a client or not
-function doTileClient(client: KWin.AbstractClient): boolean {
-    // if the client is not movable, dont bother
-    if (client.fullScreen || !client.moveable || !client.resizeable) {
-        return false;
-    }
-    // check if client is a popup window or transient (placeholder window)
-    if ((client.popupWindow || client.transient) && !tilePopups) {
-        return false;
-    }
-    // check if client is a dock or something
-    if (client.specialWindow) {
-        return false;
-    }
-    let c = client.resourceClass.toString();
-    // check if client is in blacklist cache (to save time)
-    if (blacklistCache.has(c)) {
-        return useWhitelist;
-    }
-    // check if client is black/whitelisted
-    for (const i of blacklist) {
-        if (c.includes(i) || i.includes(c)) {
-            blacklistCache.add(c);
-            return useWhitelist;
-        }
-    }
-    return !useWhitelist;
-}
-
-// forcibly sets tile, for use almost exclusively with putClientInTile
-function setTile(this: any, client: KWin.AbstractClient, tile: KWin.Tile) {
-    client.tile = tile;
-    if (client.tilemap == undefined) {
-        client.tilemap = new Map;
-        client.frameGeometryChanged.connect(geometryChange);
-        client.desktopPresenceChanged.connect(desktopChange);
-        client.screenChanged.connect(screenChange.bind(this, client));
-    }
-    client.wasTiled = true;
-    // it is not possibly undefined
-    client.tilemap!.set(new KWin.TileMapKey, tile);
-    // if x11 then we need to set the window size manually (inconsistent behavior, possible kde bug?)
-    if (isX11) {
-        let geometry = calculatePaddedGeometry(tile.absoluteGeometry, tile.padding);
-        client.frameGeometry = geometry;
-    }
-    if (keepTiledBelow) {
-        client.keepBelow = true;
-    }
-    if (borders == 1 || borders == 2) {
-        client.noBorder = true;
-    }
-}
-
-
 // sets tile and moves things around a bit if needed
-function putClientInTile(client: KWin.AbstractClient, tile: KWin.Tile) {
+function putClientInTile(client: KWin.AbstractClient, tile: KWin.Tile, key: KWin.TileMapKey) {
     // case for non-root tiles
     if (tile.parent != null) {
         let parent = tile.parent;
@@ -128,7 +9,7 @@ function putClientInTile(client: KWin.AbstractClient, tile: KWin.Tile) {
         } else {
             sibling = parent.tiles[0];
         }
-        for (let w of windowsOnDesktop(parent, client.desktop)) {
+        for (let w of windowsOnDesktop(parent, key)) {
             setTile(w, sibling);
         }
     }
@@ -136,22 +17,26 @@ function putClientInTile(client: KWin.AbstractClient, tile: KWin.Tile) {
 }
 
 // untile a client (ill refactor this later)
-function untileClient(client: KWin.AbstractClient) {
-    if (client.addons == undefined || !client.addons.wasTiled) {
+function untileClient(client: KWin.AbstractClient, key: KWin.TileMapKey) {
+    if (client.tilemap == undefined || !client.wasTiled) {
+        return;
+    }
+    let oldTile = client.tilemap.get(key);
+    if (!oldTile) {
         return;
     }
     // if root tile then make sure the loop doesnt fail
-    if (client.addons.oldTile.parent != null) {
-        let parent = client.addons.oldTile.parent;
+    if (oldTile.parent != null) {
+        let parent = oldTile.parent;
         let sibling: KWin.Tile;
         // get the parent and merge its child tile's window back into the parent to fill empty space
-        if (client.addons.oldTile == parent.tiles[0]) {
+        if (oldTile == parent.tiles[0]) {
             sibling = parent.tiles[1];
         } else {
             sibling = parent.tiles[0];
         }
         // only use windows on our virtual desktop
-        let windows = windowsOnDesktop(sibling, client.addons.oldDesktop);
+        let windows = windowsOnDesktop(sibling, key);
         if (windows.length != 0) {
             for (let w of windows) {
                 setTile(w, parent);
@@ -177,12 +62,12 @@ function untileClient(client: KWin.AbstractClient) {
                         } else {
                             t1 = t.tiles[1];
                         }
-                        let t0_windows = windowsOnDesktop(t0, client.addons.oldDesktop);
-                        let t1_windows = windowsOnDesktop(t1, client.addons.oldDesktop);
+                        let t0_windows = windowsOnDesktop(t0, key);
+                        let t1_windows = windowsOnDesktop(t1, key);
                         if (t0_windows.length != 0 && t1_windows.length != 0) {
                             // move windows from one tile to fill in gap
                             for (let w of t0_windows) {
-                                setTile(w, client.addons.oldTile);
+                                setTile(w, oldTile);
                             }
                             // move windows in other tile to fill in gap created from moving original windows
                             for (let w of t1_windows) {
@@ -197,62 +82,13 @@ function untileClient(client: KWin.AbstractClient) {
             }
         }
     }
-    client.addons.oldDesktop = client.desktop;
-    client.addons.wasTiled = false;
+    client.wasTiled = false;
     client.tile = null;
     if (keepTiledBelow) {
         client.keepBelow = false;
     }
     if (borders == 1 || borders == 2) {
         client.noBorder = false;
-    }
-}
-
-let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
-    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + desktop, false);
-    if (client.addons != undefined && client.addons.wasTiled) {
-        untileClient(client);
-        tileClient(client);
-    }
-}
-
-let screenChange = function(this: any, client: KWin.AbstractClient) {
-    printDebug("Screen changed on " + client.resourceClass, false);
-    if (client.addons != undefined && client.addons.wasTiled) {
-        untileClient(client);
-        tileClient(client);
-    }
-}
-
-let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRect) {
-    // if removed from tile
-    if (client.addons != undefined && client.addons.wasTiled && client.tile == null) {
-        printDebug(client.resourceClass + " was moved out of a tile", false);
-        untileClient(client);
-        client.addons.wasTiled = false;
-        return;
-    }
-    // if added to tile
-    if ((client.addons == undefined || !client.addons.wasTiled) && client.tile != null) {
-        let tile = client.tile;
-        // 1 because of self window
-        if (windowsOnDesktop(tile, client.desktop).length > 1) {
-            // if the tile already has windows, then just swap their positions
-            printDebug(client.resourceClass + " was moved back into a tile with windows", false);
-            for (let w of windowsOnDesktop(tile, client.desktop)) {
-                if (w != client && client.addons != undefined) {
-                    putClientInTile(w, client.addons.oldTile);
-                }
-            }
-            setTile(client, tile);
-        } else {
-            // find a tile with a parent that has windows so we can insert it
-            printDebug(client.resourceClass + " was moved back into a tile without windows", false);
-            while (tile.parent != null && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
-                tile = tile.parent;
-            }
-            putClientInTile(client, tile);
-        }
     }
 }
 
@@ -384,7 +220,63 @@ function tileClient(this: any, client: KWin.AbstractClient) {
     if (targetTile != null) {
         putClientInTile(client, targetTile);
     } else {
-        if (client.addons != undefined) client.addons.wasTiled = false;
+        if (client.wasTiled != undefined) client.wasTiled = false;
+    }
+}
+
+// retiles client across everything
+function retileClient(client: KWin.AbstractClient) {
+    if (client.tilemap == undefined || !client.wasTiled) return;
+    for (const i of client.tilemap.keys()) {
+        if (!client.activities.includes(i.activity) &&
+            !(client.desktop == -1 || client.desktop == i.desktop) &&
+            !(client.screen == i.screen)
+        ) untileClient(client, i);
+    }
+}
+
+let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
+    printDebug("Desktop changed on " + client.resourceClass + " from desktop " + desktop, false);
+    retileClient(client);
+}
+
+let screenChange = function(this: any, client: KWin.AbstractClient) {
+    printDebug("Screen changed on " + client.resourceClass, false);
+    if (client.addons != undefined && client.addons.wasTiled) {
+        untileClient(client);
+        tileClient(client);
+    }
+}
+
+let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRect) {
+    // if removed from tile
+    if (client.addons != undefined && client.addons.wasTiled && client.tile == null) {
+        printDebug(client.resourceClass + " was moved out of a tile", false);
+        untileClient(client);
+        client.addons.wasTiled = false;
+        return;
+    }
+    // if added to tile
+    if ((client.addons == undefined || !client.addons.wasTiled) && client.tile != null) {
+        let tile = client.tile;
+        // 1 because of self window
+        if (windowsOnDesktop(tile, client.desktop).length > 1) {
+            // if the tile already has windows, then just swap their positions
+            printDebug(client.resourceClass + " was moved back into a tile with windows", false);
+            for (let w of windowsOnDesktop(tile, client.desktop)) {
+                if (w != client && client.addons != undefined) {
+                    putClientInTile(w, client.addons.oldTile);
+                }
+            }
+            setTile(client, tile);
+        } else {
+            // find a tile with a parent that has windows so we can insert it
+            printDebug(client.resourceClass + " was moved back into a tile without windows", false);
+            while (tile.parent != null && windowsOnDesktop(tile.parent, client.desktop).length == 0) {
+                tile = tile.parent;
+            }
+            putClientInTile(client, tile);
+        }
     }
 }
 

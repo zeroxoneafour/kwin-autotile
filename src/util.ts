@@ -8,10 +8,10 @@ let invertInsertion: boolean;
 let insertMethod: number;
 let keepTiledBelow: boolean;
 let keepFullscreenAbove: boolean;
+let rebuildOnSwitch: boolean;
 
 // caches of stuff to make operations faster
 let blacklistCache: Set<string>;
-let bottomTileCache: Map<KWin.Tile, Array<KWin.Tile>> = new Map();
 
 // is x11
 function checkIfX11() {
@@ -38,6 +38,7 @@ let updateConfig = function() {
     insertMethod = readConfig("InsertMethod", 0);
     keepTiledBelow = readConfig("KeepTiledBelow", true);
     keepFullscreenAbove = readConfig("KeepFullscreenAbove", true);
+    rebuildOnSwitch = readConfig("RebuildOnSwitch", false);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("Running on " + (isX11 ? "X11" : "Wayland"), false);
@@ -49,6 +50,7 @@ let updateConfig = function() {
     printDebug("insertMethod == " + insertMethod, false);
     printDebug("keepTiledBelow == " + keepTiledBelow, false);
     printDebug("keepFullscreenAbove == " + keepFullscreenAbove, false);
+    printDebug("rebuildOnSwitch == " + rebuildOnSwitch, false);
 }
 
 updateConfig();
@@ -96,8 +98,8 @@ function structuredClone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
 }
 
-// gets windows on desktop because tiles share windows across several desktops
-function windowsOnDesktop(tile: KWin.Tile, key: KWin.TileMapKey): Array<KWin.AbstractClient> {
+// gets windows by key because tiles share windows across several desktops and activities
+function windowsOnKey(tile: KWin.Tile, key: KWin.TileMapKey): Array<KWin.AbstractClient> {
     let ret: Array<KWin.AbstractClient> = [];
     for (const w of tile.windows) {
         if ((w.desktop == key.desktop || w.desktop == -1) && w.activities.includes(key.activity) && w.screen == key.screen) {
@@ -114,5 +116,17 @@ function calculatePaddedGeometry(rect: Qt.QRect, padding: number): Qt.QRect {
     ret.y += padding;
     ret.width -= (padding*2);
     ret.height -= (padding*2);
+    return ret;
+}
+
+function clientToKeys(client: KWin.AbstractClient): Array<KWin.TileMapKey> {
+    let ret = new Array<KWin.TileMapKey>;
+    for (const a of client.activities) {
+        let key = new KWin.TileMapKey;
+        key.activity = a;
+        key.desktop = client.desktop;
+        key.screen = client.screen;
+        ret.push(key)
+    }
     return ret;
 }

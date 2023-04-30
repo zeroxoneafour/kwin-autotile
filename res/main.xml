@@ -11,5 +11,6 @@
         <entry name="KeepFullscreenAbove" type="bool"><default>true</default></entry>
         <entry name="InvertInsertion" type="bool"><default>true</default></entry>
         <entry name="InsertMethod" type="int"><default>0</default></entry>
+        <entry name="RebuildOnSwitch" type="bool"><default>false</default></entry>
     </group>
 </kcfg>

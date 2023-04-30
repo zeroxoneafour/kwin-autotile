@@ -53,5 +53,8 @@ Tiled windows will be kept below other windows.
 ### keep fullscreen above (check box)
 Whether to keep fullscreened windows above other windows.
 
+### rebuild on switch (check box)
+If checked, rebuilds the tiled window cache when desktops, activities, or screens are switched. Bad for performance but may fix edge case bugs.
+
 ### debug mode (check box)
 This will print debug messages every time an action is performed.

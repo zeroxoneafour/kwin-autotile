@@ -19,7 +19,7 @@
      <x>10</x>
      <y>10</y>
      <width>311</width>
-     <height>201</height>
+     <height>206</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -172,14 +172,28 @@
      </layout>
     </item>
     <item>
-     <widget class="QCheckBox" name="kcfg_Debug">
-      <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Spams your user journal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-      </property>
-      <property name="text">
-       <string>Debug Mode</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <item>
+       <widget class="QCheckBox" name="kcfg_RebuildOnSwitch">
+        <property name="text">
+         <string>Rebuild on switch</string>
+        </property>
+        <property name="tristate">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="kcfg_Debug">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Spams your user journal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Debug Mode</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>

@@ -4,19 +4,10 @@ namespace KWin {
         screen: number;
         activity: string;
         desktop: number;
-        constructor(screen?: number, activity?: string, desktop?: number) {
-            if (screen)
-                this.screen = screen;
-            else
-                this.screen = workspace.activeScreen;
-            if (activity)
-                this.activity = activity;
-            else
-                this.activity = workspace.currentActivity;
-            if (desktop)
-                this.desktop = desktop;
-            else
-                this.desktop = workspace.currentDesktop;
+        constructor() {
+            this.screen = workspace.activeScreen;
+            this.activity = workspace.currentActivity;
+            this.desktop = workspace.currentDesktop;
         }
     }
 }
@@ -74,6 +65,7 @@ declare namespace KWin {
         currentDesktop: number;
         tilingForScreen(desktop: number): KWin.TileManager;
         supportInformation(): string;
+        clientList(): Array<AbstractClient>;
         // doesnt actually exist in api, i made it up
         lastActiveClient: AbstractClient | null | undefined;
         // signals

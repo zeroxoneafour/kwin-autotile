@@ -1,3 +1,4 @@
+/*
 // keybind for untiling/retiling windows
 let retileWindow = function() {
     let client = workspace.activeClient;
@@ -371,3 +372,4 @@ let insertRight = function() {
 registerShortcut("AutotileFocusRight", "Autotile: Focus Right", "Meta+L", focusRight);
 registerShortcut("AutotileSwapRight", "Autotile: Swap Right", "Ctrl+Meta+L", swapRight);
 registerShortcut("AutotileInsertRight", "Autotile: Insert Right", "Meta+Shift+L", insertRight);
+*/

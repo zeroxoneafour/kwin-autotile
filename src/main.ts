@@ -1,5 +1,4 @@
 // global variables yay
-let clientList: Map<KWin.TileMapKey, Array<KWin.AbstractClient>>;
 let bottomTileCache: Map<KWin.Tile, Array<KWin.Tile>> = new Map();
 
 // set tile for key
@@ -39,7 +38,7 @@ function setTile(this: any, client: KWin.AbstractClient, key: KWin.TileMapKey) {
     }
 }
 
-function buildClientList(key: KWin.TileMapKey) {
+function buildClientList(key: KWin.TileMapKey): Array<KWin.AbstractClient> {
     let clients = new Array<KWin.AbstractClient>;
     let allClients = workspace.clientList();
     for (const a of allClients) {
@@ -47,16 +46,13 @@ function buildClientList(key: KWin.TileMapKey) {
             clients.push(a);
         }
     }
-    clientList.set(key, clients);
+    return clients;
 }
 
 function reloadTiling(key: KWin.TileMapKey) {
     // should set by default to the current screen, activity, and desktop
-    if (rebuildOnSwitch || !clientList.has(key)) {
-        buildClientList(key);
-    }
+    let clients = buildClientList(key);
     // not possibly undefined
-    let clients = clientList.get(key)!;
     for (let client of clients) {
         setTile(client, key);
     }
@@ -145,7 +141,6 @@ function untileClientFromKey(client: KWin.AbstractClient, key: KWin.TileMapKey) 
             }
         }
     }
-    reloadTiling(key);
 }
 
 function untileClient(client: KWin.AbstractClient, key: KWin.TileMapKey) {
@@ -158,13 +153,14 @@ function untileClient(client: KWin.AbstractClient, key: KWin.TileMapKey) {
     if (borders == 1 || borders == 2) {
         client.noBorder = false;
     }
+    reloadTiling(key);
 }
 
 function untileClientFull(client: KWin.AbstractClient) {
     if (!client.tilemap) return;
     for (const key of client.tilemap.keys()) {
         untileClientFromKey(client, key);
-
+        reloadTiling(key);
     }
     client.wasTiled = false;
     client.tile = null;
@@ -302,12 +298,12 @@ function tileClient(this: any, client: KWin.AbstractClient, key: KWin.TileMapKey
         }
         default: printDebug("Invalid insertion method", true);
     }
-
     if (targetTile != null) {
         putClientInTile(client, targetTile, key);
     } else {
         if (client.wasTiled != undefined) client.wasTiled = false;
     }
+    reloadTiling(key);
 }
 
 let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
@@ -315,7 +311,6 @@ let desktopChange = function(client: KWin.AbstractClient, desktop: number) {
     if (!client.tilemap) return;
     for (const key of clientToKeys(client)) {
         tileClient(client, key);
-        reloadTiling(key);
     }
 }
 
@@ -324,18 +319,15 @@ let screenChange = function(this: any, client: KWin.AbstractClient) {
     if (!client.tilemap) return;
     for (const key of clientToKeys(client)) {
         tileClient(client, key);
-        reloadTiling(key);
     }
 }
 
 let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRect) {
+    let key = new KWin.TileMapKey; // windows should only be moved into tiles on selected screens
     // if removed from tile
     if (client.tilemap && client.wasTiled && client.tile == null) {
         printDebug(client.resourceClass + " was moved out of a tile", false);
-        for (const key of clientToKeys(client)) {
-            untileClient(client, key);
-            reloadTiling(key);
-        }
+        untileClient(client, key);
         client.wasTiled = false;
         return;
     }
@@ -343,7 +335,6 @@ let geometryChange = function(client: KWin.AbstractClient, _oldgeometry: Qt.QRec
     // client.wasTiled should be undef if not tiled before
     if (!client.wasTiled && client.tile != null) {
         let tile = client.tile;
-        let key = new KWin.TileMapKey; // windows should only be moved into tiles on selected screens
         // 1 because of self window
         if (windowsOnKey(tile, key).length > 1) {
             // if the tile already has windows, then just swap their positions

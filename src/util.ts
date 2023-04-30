@@ -8,7 +8,6 @@ let invertInsertion: boolean;
 let insertMethod: number;
 let keepTiledBelow: boolean;
 let keepFullscreenAbove: boolean;
-let rebuildOnSwitch: boolean;
 
 // caches of stuff to make operations faster
 let blacklistCache: Set<string>;
@@ -38,7 +37,6 @@ let updateConfig = function() {
     insertMethod = readConfig("InsertMethod", 0);
     keepTiledBelow = readConfig("KeepTiledBelow", true);
     keepFullscreenAbove = readConfig("KeepFullscreenAbove", true);
-    rebuildOnSwitch = readConfig("RebuildOnSwitch", false);
     blacklistCache = new Set();
     printDebug("Config Updated", false)
     printDebug("Running on " + (isX11 ? "X11" : "Wayland"), false);
@@ -50,7 +48,6 @@ let updateConfig = function() {
     printDebug("insertMethod == " + insertMethod, false);
     printDebug("keepTiledBelow == " + keepTiledBelow, false);
     printDebug("keepFullscreenAbove == " + keepFullscreenAbove, false);
-    printDebug("rebuildOnSwitch == " + rebuildOnSwitch, false);
 }
 
 updateConfig();

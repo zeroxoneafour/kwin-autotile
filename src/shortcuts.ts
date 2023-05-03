@@ -1,11 +1,10 @@
-
 // keybind for untiling/retiling windows
 let retileWindow = function() {
     let client = workspace.activeClient;
     if (client == null) return;
     if (client.tile != null) {
         printDebug("Untiling client " + client.resourceClass, false);
-        for (const key of clientToKeys(client)) untileClient(client, key);
+        untileClient(client);
     } else {
         printDebug("Retiling client " + client.resourceClass, false);
         for (const key of clientToKeys(client)) tileClient(client, key);

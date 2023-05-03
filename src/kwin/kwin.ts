@@ -40,6 +40,8 @@ declare namespace KWin {
         wasTiled: boolean | undefined;
         //signals
         desktopPresenceChanged: Signal<(client: AbstractClient, desktop: number) => void>;
+        desktopChanged: Signal<() => void>;
+        activitiesChanged: Signal<(client: AbstractClient) => void>;
     }
     class Tile {
         tiles: Array<Tile>;
@@ -69,13 +71,16 @@ declare namespace KWin {
         // doesnt actually exist in api, i made it up
         lastActiveClient: AbstractClient | null | undefined;
         // signals
-        clientAdded: Signal<(client: KWin.AbstractClient) => void>;
-        clientRemoved: Signal<(client: KWin.AbstractClient) => void>;
-        clientActivated: Signal<(client: KWin.AbstractClient) => void>;
-        clientMinimized: Signal<(client: KWin.AbstractClient) => void>;
-        clientUnminimized: Signal<(client: KWin.AbstractClient) => void>;
+        clientAdded: Signal<(client: AbstractClient) => void>;
+        clientRemoved: Signal<(client: AbstractClient) => void>;
+        clientActivated: Signal<(client: AbstractClient) => void>;
+        clientMinimized: Signal<(client: AbstractClient) => void>;
+        clientUnminimized: Signal<(client: AbstractClient) => void>;
         // idk what user does
-        clientFullScreenSet: Signal<(client: KWin.AbstractClient, fullscreen: boolean, user: any) => void>;
+        clientFullScreenSet: Signal<(client: AbstractClient, fullscreen: boolean, user: any) => void>;
+        // signals for workspace
+        currentDesktopChanged: Signal<(desktop: number, client: AbstractClient) => void>;
+        currentActivityChanged: Signal<(activity: string) => void>;
     }
     class Options {
         configChanged: Signal<() => void>;

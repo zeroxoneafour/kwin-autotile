@@ -96,11 +96,20 @@ function structuredClone<T>(value: T): T {
 }
 
 // gets windows by key because tiles share windows across several desktops and activities
-function windowsOnKey(tile: KWin.Tile, key: KWin.TileMapKey): Array<KWin.AbstractClient> {
+function windowsOnKey(tile: KWin.Tile, key: KWin.TileMapKey, exclude?: KWin.AbstractClient): Array<KWin.AbstractClient> {
     let ret: Array<KWin.AbstractClient> = [];
-    for (const w of tile.windows) {
-        if ((w.desktop == key.desktop || w.desktop == -1) && w.activities.includes(key.activity) && w.screen == key.screen) {
-            ret.push(w);
+    // ik the if loop can go inside but this may be more performant
+    if (exclude == undefined) {
+        for (const w of tile.windows) {
+            if ((w.desktop == key.desktop || w.desktop == -1) && w.activities.includes(key.activity) && w.screen == key.screen) {
+                ret.push(w);
+            }
+        }
+    } else {
+        for (const w of tile.windows) {
+            if ((w.desktop == key.desktop || w.desktop == -1) && w.activities.includes(key.activity) && w.screen == key.screen && w != exclude) {
+                ret.push(w);
+            }
         }
     }
     return ret;

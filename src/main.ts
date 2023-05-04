@@ -299,8 +299,16 @@ let clientDesktopChange = function(this: any, client: KWin.AbstractClient) {
     printDebug("Desktop changed on " + client.resourceClass, false);
     if (!client.tilemap) return;
     untileClient(client);
-    for (const key of clientToKeys(client)) {
-        tileClient(client, key);
+    for (let key of clientToKeys(client)) {
+        if (key.desktop != -1) {
+            tileClient(client, key);
+        } else { // on all desktops
+            for (let desktop: number = 0; desktop > workspace.desktops; desktop++) {
+                key.desktop = desktop;
+                tileClient(client, key);
+            }
+            reloadTiling(key);
+        }
     }
 }
 

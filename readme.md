@@ -1,3 +1,5 @@
+# deprecated, use [Polonium](https://github.com/zeroxoneafour/polonium) instead
+
 # autotile
 Autotiling for KWin using heavy inspiration from [kwin-tiling-scripts](https://invent.kde.org/mart/kwin-tiling-scripts).
 
